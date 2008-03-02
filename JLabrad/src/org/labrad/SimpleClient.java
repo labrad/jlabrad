@@ -63,7 +63,7 @@ public class SimpleClient {
 	
 	public void connect(String host, int port) {
 		if (password == null) {
-			doConnect(host, port, getEnv("LABRADPASSWORD", "martinisgroup"));
+			doConnect(host, port, getEnv("LABRADPASSWORD", ""));
 		} else {
 			doConnect(host, port, password);
 		}
