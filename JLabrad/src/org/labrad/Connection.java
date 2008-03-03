@@ -8,7 +8,7 @@ import java.security.NoSuchAlgorithmException;
 public class Connection {
 	
 	private static final String encoding = "ISO-8859-1";
-	private static String password = "martinisgroup";
+	private static String password = "";
 	
 	/**
 	 * @param args
