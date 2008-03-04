@@ -8,39 +8,34 @@ import java.util.Hashtable;
 import java.util.Map;
 
 public class SimpleClient {
-    private static final String ENCODING = "ISO-8859-1";
-    private static final long MANAGER = 1;
-    private static final long LOOKUP = 3;
-    private static final int NUM_RETRIES = 3;
-
-    private String host, password = null;
-    private int port;
-    private long ID;
-    private boolean connected = false;
-
-    private Socket socket;
-    PacketInputStream is;
-    PacketOutputStream os;
-
-    private static final Context defaultCtx = new Context(0, 0);
-    private long nextContext = 1;
-
-    Hashtable<String, Long> serverCache = new Hashtable<String, Long>();
-    Hashtable<Long, Hashtable<String, Long>> settingCache = new Hashtable<Long, Hashtable<String, Long>>();
-
-    private String getEnv(String key, String defaultVal) {
-        Map<String, String> env = System.getenv();
-        Map<String, String> envUpper = new Hashtable<String, String>();
-        for (String k : env.keySet()) {
-            envUpper.put(k.toUpperCase(), env.get(k));
-        }
-        key = key.toUpperCase();
-        if (envUpper.containsKey(key)) {
-            return envUpper.get(key);
-        } else {
-            return defaultVal;
-        }
-    }
+	private static final String ENCODING = "ISO-8859-1";
+	private static final long MANAGER = 1;
+	private static final long LOOKUP = 3;
+	private static final int NUM_RETRIES = 3;
+	
+	private String host, password = null;
+	private int port;
+	private long ID;
+	private boolean connected = false;
+	
+	private Socket socket;
+	PacketInputStream is;
+	PacketOutputStream os;
+	
+	private static final Context defaultCtx = new Context(0, 0);
+	private long nextContext = 1;
+	
+	Hashtable<String, Long> serverCache = new Hashtable<String, Long>();
+	Hashtable<Long, Hashtable<String, Long>> settingCache = new Hashtable<Long, Hashtable<String, Long>>();
+	
+	private String getEnv(String key, String defaultVal) {
+		Map<String, String> env = System.getenv();
+		if (env.containsKey(key)) {
+			return env.get(key);
+		} else {
+			return defaultVal;
+		}
+	}
 
     public String getHost() {
         ensureConnection();
