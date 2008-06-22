@@ -1,9 +1,9 @@
-package org.labrad;
+package org.labrad.data;
 
 public class Complex {
     public double real, imag;
 
-    Complex(double real, double imag) {
+    public Complex(double real, double imag) {
         this.real = real;
         this.imag = imag;
     }

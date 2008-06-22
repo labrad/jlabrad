@@ -2,6 +2,9 @@ package org.labrad;
 
 import java.io.IOException;
 
+import org.labrad.data.Data;
+import org.labrad.data.Record;
+
 public class ServerProxy {
     private SimpleClient sc;
 
@@ -15,11 +18,23 @@ public class ServerProxy {
         this.name = name;
     }
 
-    public Record request(String setting) throws IOException {
-        return sc.request(ID, new Record(setting))[0];
+    public Data sendRequest(String setting) throws IOException {
+        return sc.sendRequest(ID, new Record(setting))[0].getData();
     }
 
-    public Record request(String setting, Data data) throws IOException {
-        return sc.request(ID, new Record(setting, data))[0];
+    public Data sendRequest(String setting, Data data) throws IOException {
+        return sc.sendRequest(ID, new Record(setting, data))[0].getData();
+    }
+    
+    public PacketBuilder newPacket() {
+    	return new PacketBuilder(sc, this);
+    }
+    
+    public String getName() {
+    	return name;
+    }
+    
+    public long getID() {
+    	return ID;
     }
 }

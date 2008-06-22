@@ -1,6 +1,6 @@
 package org.labrad.errors;
 
-import org.labrad.Data;
+import org.labrad.data.Data;
 
 public class LabradException extends Exception {
     private static final long serialVersionUID = 1L;

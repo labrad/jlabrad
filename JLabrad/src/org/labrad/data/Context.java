@@ -1,4 +1,4 @@
-package org.labrad;
+package org.labrad.data;
 
 public class Context {
     public long high, low;

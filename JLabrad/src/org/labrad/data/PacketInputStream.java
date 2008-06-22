@@ -1,8 +1,7 @@
-package org.labrad;
+package org.labrad.data;
 
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
-//import java.io.BufferedInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.util.Vector;

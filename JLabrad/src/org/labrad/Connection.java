@@ -5,6 +5,13 @@ import java.net.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import org.labrad.data.Context;
+import org.labrad.data.Data;
+import org.labrad.data.Packet;
+import org.labrad.data.PacketInputStream;
+import org.labrad.data.PacketOutputStream;
+import org.labrad.data.Record;
+
 public class Connection {
 
     private static final String encoding = "ISO-8859-1";
@@ -33,7 +40,7 @@ public class Connection {
             System.out.println("got packet: " + packet.toString());
 
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] challenge = packet.getRecord(0).data.getBytes();
+            byte[] challenge = packet.getRecord(0).getData().getBytes();
             md.update(challenge);
             md.update(password.getBytes(encoding));
 
@@ -51,7 +58,7 @@ public class Connection {
             packet = is.readPacket();
             System.out.println("got packet: " + packet.toString());
 
-            long ID = packet.getRecord(0).data.getWord();
+            long ID = packet.getRecord(0).getData().getWord();
             System.out.println("My ID is: " + ID);
 
             // lookup hydrant server
@@ -59,7 +66,7 @@ public class Connection {
             os.writePacket(new Packet(new Context(0, 1), 1, request,
                     new Record(3, data)));
             packet = is.readPacket();
-            long hydrantID = packet.getRecord(0).data.getWord();
+            long hydrantID = packet.getRecord(0).getData().getWord();
 
             long start, end;
 

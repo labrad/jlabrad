@@ -6,6 +6,12 @@ import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.labrad.data.Context;
+import org.labrad.data.Packet;
+import org.labrad.data.PacketInputStream;
+import org.labrad.data.PacketOutputStream;
+import org.labrad.data.Record;
+
 public class Client {
     Reader reader;
 
@@ -63,11 +69,11 @@ public class Client {
         }
     }
 
-    public Response sendRequest(long server, Record... records) {
+    public void sendRequest(long server, Record... records) {
         Context context = new Context(0, 1);
         writeQueue.add(new Packet(context, server, nextRequest, records));
         nextRequest++;
-        return new Response();
+        //return new Response();
     }
 
     Client(String host, int port) {

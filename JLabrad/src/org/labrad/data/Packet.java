@@ -1,11 +1,12 @@
-package org.labrad;
+package org.labrad.data;
+
 
 public class Packet {
-    public Context context;
+    private Context context;
 
-    public long target;
+    private long target;
 
-    public int request;
+    private int request;
 
     Record[] records;
 
@@ -37,4 +38,16 @@ public class Packet {
     public Record getRecord(int index) {
         return records[index];
     }
+
+	public Context getContext() {
+		return context;
+	}
+
+	public long getTarget() {
+		return target;
+	}
+
+	public int getRequest() {
+		return request;
+	}
 }

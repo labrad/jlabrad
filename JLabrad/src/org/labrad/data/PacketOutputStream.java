@@ -1,4 +1,4 @@
-package org.labrad;
+package org.labrad.data;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
@@ -14,31 +14,38 @@ public class PacketOutputStream extends BufferedOutputStream {
     }
 
     public void writePacket(Packet packet) throws IOException {
-        writePacket(packet.context, packet.target, packet.request, packet.getRecords());
+        writePacket(packet.getContext(), packet.getTarget(),
+        		    packet.getRequest(), packet.getRecords());
     }
 
     public void writePacket(Context context, long target, int request,
+    		Record... records) throws IOException {
+    	writePacket(context.high, context.low, target, request, records);
+    }
+    
+    public void writePacket(long high, long low, long target, int request,
             Record... records) throws IOException {
 
         ByteArrayOutputStream os = new ByteArrayOutputStream();
 
+        // flatten records
         for (Record rec : records) {
             Data recData = new Data(Type.RECORD_TYPE);
-            recData.setWord(rec.ID, 0);
-            recData.setStr(rec.data.getTag(), 1);
-            recData.setBytes(rec.data.flatten(), 2);
+            recData.setWord(rec.getID(), 0);
+            recData.setStr(rec.getData().getTag(), 1);
+            recData.setBytes(rec.getData().flatten(), 2);
             os.write(recData.flatten());
         }
 
+        // flatten packet header and append records
         Data packetData = new Data(Type.PACKET_TYPE);
-        packetData.setWord(context.high, 0);
-        packetData.setWord(context.low, 1);
+        packetData.setWord(high, 0);
+        packetData.setWord(low, 1);
         packetData.setInt(request, 2);
         packetData.setWord(target, 3);
         packetData.setBytes(os.toByteArray(), 4);
 
-        byte[] output = packetData.flatten();
-        out.write(output);
+        out.write(packetData.flatten());
         out.flush();
     }
 }

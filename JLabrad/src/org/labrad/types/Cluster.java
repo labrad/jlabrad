@@ -3,34 +3,44 @@ package org.labrad.types;
 public class Cluster extends Type {
 
     Type[] elementTypes;
-
+    int _dataWidth;
+    boolean _isFixedWidth;
+    int[] _offsets;
+    String _toString;
+    
     public Cluster(Type[] elementTypes) {
         this.elementTypes = elementTypes;
-    }
-
-    public boolean isFixedWidth() {
-        for (Type t : elementTypes) {
-            if (!t.isFixedWidth()) {
-                return false;
-            }
+        
+        _dataWidth = 0;
+        _isFixedWidth = true;
+        _toString = "";
+        _offsets = new int[elementTypes.length];
+        
+        int ofs = 0;
+        
+        for (int i = 0; i < elementTypes.length; i++) {
+        	Type t = elementTypes[i];
+        	_dataWidth += t.dataWidth();
+        	if (!t.isFixedWidth()) {
+        		_isFixedWidth = false;
+        	}
+        	_toString += t.toString();
+        	_offsets[i] = ofs;
+        	ofs += t.dataWidth();
         }
-        return true;
+        _toString = "(" + _toString + ")";
+    }
+    
+    public boolean isFixedWidth() {
+        return _isFixedWidth;
     }
 
     public int dataWidth() {
-        int dw = 0;
-        for (Type t : elementTypes) {
-            dw += t.dataWidth();
-        }
-        return dw;
+        return _dataWidth;
     }
 
     public String toString() {
-        String s = "";
-        for (Type t : elementTypes) {
-            s += t.toString();
-        }
-        return "(" + s + ")";
+        return _toString;
     }
 
     public String pretty() {
@@ -54,10 +64,6 @@ public class Cluster extends Type {
     }
 
     public int getOffset(int index) {
-        int ofs = 0;
-        for (int i = 0; i < index; i++) {
-            ofs += elementTypes[i].dataWidth();
-        }
-        return ofs;
+        return _offsets[index];
     }
 }

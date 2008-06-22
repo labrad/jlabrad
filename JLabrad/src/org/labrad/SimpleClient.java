@@ -7,11 +7,22 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Hashtable;
 import java.util.Map;
 
+import org.labrad.data.Context;
+import org.labrad.data.Data;
+import org.labrad.data.Packet;
+import org.labrad.data.PacketInputStream;
+import org.labrad.data.PacketOutputStream;
+import org.labrad.data.Record;
+import org.labrad.errors.IncorrectPasswordException;
+
 public class SimpleClient {
 	private static final String ENCODING = "ISO-8859-1";
 	private static final long MANAGER = 1;
 	private static final long LOOKUP = 3;
-	private static final int NUM_RETRIES = 3;
+	private static final long PROTOCOL = 1;
+	
+	private static final String DEFAULT_HOST = "localhost";
+	private static final String DEFAULT_PORT = "7682";
 	
 	private String host, password = null;
 	private int port;
@@ -53,12 +64,12 @@ public class SimpleClient {
     }
 
     public void connect() throws IOException, IncorrectPasswordException {
-        connect(getEnv("LABRADHOST", "localhost"));
+        connect(getEnv("LABRADHOST", DEFAULT_HOST));
     }
 
     public void connect(String host)
                    throws IOException, IncorrectPasswordException {
-        connect(host, Integer.parseInt(getEnv("LABRADPORT", "7682")));
+        connect(host, Integer.parseInt(getEnv("LABRADPORT", DEFAULT_PORT)));
     }
 
     public void connect(String host, int port)
@@ -86,28 +97,29 @@ public class SimpleClient {
             connected = true;
 
             // send first (empty) packet
-            response = request();
+            response = sendRequest();
 
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] challenge = response[0].data.getBytes();
+            byte[] challenge = response[0].getData().getBytes();
             md.update(challenge);
             md.update(password.getBytes(ENCODING));
 
             // send password response
             data = new Data("s").setBytes(md.digest());
             try {
-                response = request(new Record(0, data));
+                response = sendRequest(new Record(0, data));
             } catch (IOException e) {
                 throw new IncorrectPasswordException();
             }
             
             // print welcome message
-            System.out.println(response[0].data.getStr());
+            System.out.println(response[0].getData().getStr());
 
             // send identification packet
-            data = new Data("ws").setWord(1, 0).setStr("Java SimpleClient", 1);
-            response = request(new Record(0, data));
-            ID = response[0].data.getWord();
+            data = new Data("ws").setWord(PROTOCOL, 0)
+                                 .setStr("Java SimpleClient", 1);
+            response = sendRequest(new Record(0, data));
+            ID = response[0].getData().getWord();
 
             // if we get here, connection was successful
             this.host = host;
@@ -133,9 +145,9 @@ public class SimpleClient {
         if (serverCache.containsKey(server)) {
             return serverCache.get(server);
         }
-        Record[] response = request(new Record(LOOKUP, new Data("s")
-                .setStr(server)));
-        long ID = response[0].data.getWord();
+        Record[] response = sendRequest(
+        		new Record(LOOKUP, new Data("s").setStr(server)));
+        long ID = response[0].getData().getWord();
         serverCache.put(server, ID);
         settingCache.put(ID, new Hashtable<String, Long>());
         return ID;
@@ -175,40 +187,45 @@ public class SimpleClient {
         for (int i = 0; i < nLookups; i++) {
             data.setStr(lookups[i], 1, i);
         }
-        Record[] response = request(new Record(LOOKUP, data));
+        Record[] response = sendRequest(new Record(LOOKUP, data));
 
         for (int i = 0; i < nLookups; i++) {
-            long ID = response[0].data.getWord(1, i);
+            long ID = response[0].getData().getWord(1, i);
             cache.put(lookups[i], ID);
             IDs[indices[i]] = ID;
         }
         return IDs;
     }
 
-    public ServerProxy server(String name) throws IOException {
+    public ServerProxy getServer(String name) throws IOException {
         long ID = lookupServer(name);
         return new ServerProxy(this, ID, name);
     }
 
-    public Record[] request(Record... records) throws IOException {
-        return request(defaultCtx, MANAGER, records);
+    public Context newContext() {
+    	return new Context(0, nextContext++);
+    }
+    
+    public Record[] sendRequest(Record... records) throws IOException {
+        return sendRequest(defaultCtx, MANAGER, records);
     }
 
-    public Record[] request(String target, Record... records)
+    public Record[] sendRequest(String target, Record... records)
             throws IOException {
-        return request(lookupServer(target), records);
+        return sendRequest(lookupServer(target), records);
     }
 
-    public Record[] request(long target, Record... records) throws IOException {
-        return request(defaultCtx, target, records);
+    public Record[] sendRequest(long target, Record... records)
+    		throws IOException {
+        return sendRequest(defaultCtx, target, records);
     }
 
-    public Record[] request(Context context, String target, Record... records)
+    public Record[] sendRequest(Context context, String target, Record... records)
             throws IOException {
-        return request(context, lookupServer(target), records);
+        return sendRequest(context, lookupServer(target), records);
     }
 
-    public Record[] request(Context context, long target, Record... records)
+    public Record[] sendRequest(Context context, long target, Record... records)
             throws IOException {
         ensureConnection();
 
@@ -219,7 +236,7 @@ public class SimpleClient {
 
         for (int i = 0; i < records.length; i++) {
             if (records[i].needsLookup()) {
-                lookups[nLookups] = records[i].name;
+                lookups[nLookups] = records[i].getName();
                 indices[nLookups] = i;
                 nLookups++;
             } else {
@@ -230,7 +247,7 @@ public class SimpleClient {
             long[] IDs = lookupSettings(target, lookups);
             for (int i = 0; i < nLookups; i++) {
                 lookedUpRecords[indices[i]] = new Record(IDs[i],
-                        records[indices[i]].data);
+                        records[indices[i]].getData());
             }
         }
 
@@ -246,7 +263,7 @@ public class SimpleClient {
     }
 
     public static void main(String[] args) throws IOException, IncorrectPasswordException {
-        Record response;
+        Data response;
         long start, end;
 
         String server = "Python Test Server";
@@ -257,20 +274,20 @@ public class SimpleClient {
         sc.connect("localhost");
         
         // lookup hydrant server
-        ServerProxy hydrant = sc.server(server);
+        ServerProxy hydrant = sc.getServer(server);
         
         // random hydrant data
         System.out.println("getting random data, with printing...");
         start = System.currentTimeMillis();
         for (int i = 0; i < 1000; i++) {
-            response = hydrant.request(setting);
+            response = hydrant.sendRequest(setting);
             System.out.println("got packet: " + response.toString());
         }
         end = System.currentTimeMillis();
         System.out.println("done.  elapsed: " + (end - start) + " ms.");
 
         start = System.currentTimeMillis();
-        response = hydrant.request("debug");
+        response = hydrant.sendRequest("debug");
         System.out.println(response.toString());
         end = System.currentTimeMillis();
         System.out.println("done.  elapsed: " + (end - start) + " ms.");
@@ -279,7 +296,7 @@ public class SimpleClient {
         System.out.println("getting random data, make pretty, but don't print...");
         start = System.currentTimeMillis();
         for (int i = 0; i < 1000; i++) {
-            response = hydrant.request(setting);
+            response = hydrant.sendRequest(setting);
             response.toString();
         }
         end = System.currentTimeMillis();
@@ -289,7 +306,7 @@ public class SimpleClient {
         System.out.println("getting random data, no printing...");
         start = System.currentTimeMillis();
         for (int i = 0; i < 1000; i++) {
-            hydrant.request(setting);
+            hydrant.sendRequest(setting);
         }
         end = System.currentTimeMillis();
         System.out.println("done.  elapsed: " + (end - start) + " ms.");
@@ -298,7 +315,7 @@ public class SimpleClient {
         System.out.println("pinging manager 10000 times...");
         start = System.currentTimeMillis();
         for (int i = 0; i < 10000; i++) {
-            sc.request();
+            sc.sendRequest();
         }
         end = System.currentTimeMillis();
         System.out.println("done.  elapsed: " + (end - start) + " ms.");
