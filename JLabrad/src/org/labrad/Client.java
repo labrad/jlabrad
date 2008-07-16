@@ -1,8 +1,8 @@
 package org.labrad;
 
+import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -37,7 +37,8 @@ public class Client {
         public void run() {
             try {
                 while (!Thread.interrupted()) {
-                    Packet p = is.readPacket();
+                    //Packet p = is.readPacket();
+                    is.readPacket();
                 }
             } catch (IOException e) {
                 System.out.println("IOException in Reader Thread.");
@@ -47,7 +48,6 @@ public class Client {
 
     class Writer extends Thread {
         BlockingQueue<Packet> queue;
-
         PacketOutputStream os;
 
         Writer(BlockingQueue<Packet> queue, PacketOutputStream os) {
@@ -82,10 +82,8 @@ public class Client {
 
         try {
             socket = new Socket("localhost", 7682);
-            PacketInputStream is = new PacketInputStream(socket
-                    .getInputStream());
-            PacketOutputStream os = new PacketOutputStream(socket
-                    .getOutputStream());
+            PacketInputStream is = new PacketInputStream(socket.getInputStream());
+            PacketOutputStream os = new PacketOutputStream(socket.getOutputStream());
 
             writeQueue = new LinkedBlockingQueue<Packet>();
 
