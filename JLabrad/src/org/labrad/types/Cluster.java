@@ -8,7 +8,7 @@ public class Cluster extends Type {
     int[] _offsets;
     String _toString;
     
-    public Cluster(Type[] elementTypes) {
+    public Cluster(Type... elementTypes) {
         this.elementTypes = elementTypes;
         
         _dataWidth = 0;

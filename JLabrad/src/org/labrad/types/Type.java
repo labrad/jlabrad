@@ -1,15 +1,15 @@
 package org.labrad.types;
 
-import java.util.Hashtable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Vector;
-import java.lang.RuntimeException;
 
 // TODO: add a function to find types for generic java data
 
 public class Type {
 
     private static final Type[] TYPE_ARRAY = {};
-    private static Hashtable<String, Type> cache = new Hashtable<String, Type>();
+    private static Map<String, Type> cache = new HashMap<String, Type>();
 
     public static final Type HEADER_TYPE = parse("wwiww");
     public static final Type PACKET_TYPE = parse("wwiws");

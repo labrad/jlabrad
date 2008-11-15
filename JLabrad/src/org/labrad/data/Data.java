@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.lang.RuntimeException;
 import java.util.Random;
 import java.util.Vector;
 
@@ -134,7 +133,6 @@ public class Data {
                 int size = 1;
                 for (i = 0; i < depth; i++) {
                     size *= ByteManip.getInt(buf, ofs + 4 * i);
-                    ;
                 }
                 os.write(buf, ofs, 4 * depth);
                 // write data from array
@@ -375,6 +373,17 @@ public class Data {
         return type instanceof org.labrad.types.Error;
     }
     
+    /**
+     * getSubtype
+     * 
+     * Extract a subtype from this data object as specified
+     * by the given indices.  Also check that the type at this
+     * location is a subtype of the specified type.
+     * 
+     * @param code
+     * @param indices
+     * @return
+     */
     private Type getSubtype(char code, int... indices) {
     	Type type = getSubtype(indices);
     	if (type.getCode() != code) {
@@ -390,6 +399,11 @@ public class Data {
     	return type;
     }
     
+    /**
+     * getSubtype, but without typechecking
+     * @param indices
+     * @return
+     */
     private Type getSubtype(int... indices) {
         Type type = this.type;
         int dimsLeft = 0;
@@ -414,6 +428,11 @@ public class Data {
         return type;
     }
     
+    /**
+     * get a view into the data array at the position specified by indices.
+     * @param indices
+     * @return
+     */
     private ByteArrayView getOffset(int... indices) {
         Type type = this.type;
         byte[] data = this.data;
@@ -467,12 +486,19 @@ public class Data {
         return new ByteArrayView(data, ofs);
     }
 
+    /**
+     * Get a Data view into a subobject given by indices.
+     * @param indices
+     * @return
+     */
     public Data getData(int... indices) {
         Type type = getSubtype(indices);
         ByteArrayView pos = getOffset(indices);
         return new Data(type, pos.getBytes(), pos.getOffset(), heap);
     }
 
+    
+    // boolean
     public boolean isBool(int... indices) {
         return getSubtype(indices) instanceof org.labrad.types.Bool;
     }
@@ -488,6 +514,8 @@ public class Data {
         return this;
     }
 
+    
+    // int
     public boolean isInt(int... indices) {
         return getSubtype(indices) instanceof org.labrad.types.Int;
     }
@@ -503,6 +531,8 @@ public class Data {
         return this;
     }
 
+    
+    // word
     public boolean isWord(int... indices) {
         return getSubtype(indices) instanceof org.labrad.types.Word;
     }
@@ -518,6 +548,8 @@ public class Data {
         return this;
     }
 
+    
+    // str
     public boolean isStr(int... indices) {
         return getSubtype(indices) instanceof org.labrad.types.Str;
     }
@@ -539,6 +571,8 @@ public class Data {
         return this;
     }
 
+    
+    // bytes
     public boolean isBytes(int... indices) {
         return getSubtype(indices) instanceof org.labrad.types.Str;
     }
@@ -555,6 +589,8 @@ public class Data {
         return this;
     }
 
+    
+    // value
     public boolean isValue(int... indices) {
         return getSubtype(indices) instanceof org.labrad.types.Value;
     }
@@ -570,6 +606,8 @@ public class Data {
         return this;
     }
 
+    
+    // complex
     public boolean isComplex(int... indices) {
         return getSubtype(indices) instanceof org.labrad.types.Complex;
     }
@@ -599,6 +637,8 @@ public class Data {
     	return getSubtype(indices).getUnits();
     }
 
+    
+    // time
     // TODO: correct time translation
     public boolean isTime(int... indices) {
         return getSubtype(indices) instanceof org.labrad.types.Time;
@@ -615,6 +655,8 @@ public class Data {
         return this;
     }
 
+    
+    // arrays
     public boolean isArray(int... indices) {
         return getSubtype(indices) instanceof org.labrad.types.List;
     }
@@ -667,6 +709,8 @@ public class Data {
         return this;
     }
 
+    
+    // clusters
     public boolean isCluster(int... indices) {
         return getSubtype(indices) instanceof org.labrad.types.Cluster;
     }
@@ -675,6 +719,8 @@ public class Data {
         return getSubtype('(', indices).size();
     }
 
+    
+    // errors
     public boolean isError(int... indices) {
         return getSubtype(indices) instanceof org.labrad.types.Error;
     }
@@ -770,27 +816,27 @@ public class Data {
         }
         System.out.println("Complex okay.");
 
-        Data data, data2;
+        Data d1, d2;
         byte[] flat;
 
-        data = new Data("i");
-        data.setInt(100);
-        assert data.getInt() == 100;
+        d1 = new Data("i");
+        d1.setInt(100);
+        assert d1.getInt() == 100;
 
-        data = new Data("s");
-        data.setStr("This is a test.");
-        System.out.println(data.getStr());
+        d1 = new Data("s");
+        d1.setStr("This is a test.");
+        System.out.println(d1.getStr());
 
-        data = new Data("*s");
-        data.setArraySize(20);
+        d1 = new Data("*s");
+        d1.setArraySize(20);
         for (count = 0; count < 20; count++) {
-            data.setStr("This is string " + Integer.toString(count), count);
+            d1.setStr("This is string " + Integer.toString(count), count);
         }
         for (count = 0; count < 20; count++) {
-            System.out.println(data.getStr(count));
+            System.out.println(d1.getStr(count));
         }
 
-        data = new Data("biwsvc");
+        d1 = new Data("biwsvc");
         b = rand.nextBoolean();
         i = rand.nextInt();
         l = Math.abs(rand.nextLong()) % 4294967296L;
@@ -799,26 +845,26 @@ public class Data {
         re = rand.nextGaussian();
         im = rand.nextGaussian();
 
-        data.setBool(b, 0);
-        data.setInt(i, 1);
-        data.setWord(l, 2);
-        data.setStr(s, 3);
-        data.setValue(d, 4);
-        data.setComplex(re, im, 5);
+        d1.setBool(b, 0);
+        d1.setInt(i, 1);
+        d1.setWord(l, 2);
+        d1.setStr(s, 3);
+        d1.setValue(d, 4);
+        d1.setComplex(re, im, 5);
 
-        assert b == data.getBool(0);
-        assert i == data.getInt(1);
-        assert l == data.getWord(2);
-        assert s.equals(data.getStr(3));
-        assert d == data.getValue(4);
-        Complex c = data.getComplex(5);
+        assert b == d1.getBool(0);
+        assert i == d1.getInt(1);
+        assert l == d1.getWord(2);
+        assert s.equals(d1.getStr(3));
+        assert d == d1.getValue(4);
+        Complex c = d1.getComplex(5);
         assert re == c.real;
         assert im == c.imag;
         System.out.println("Cluster okay.");
-        System.out.println(data.pretty());
+        System.out.println(d1.pretty());
 
-        data = new Data("*(biwsv[m]c[m/s])");
-        data.setArraySize(20);
+        d1 = new Data("*(biwsv[m]c[m/s])");
+        d1.setArraySize(20);
         for (count = 0; count < 20; count++) {
             b = rand.nextBoolean();
             i = rand.nextInt();
@@ -828,55 +874,55 @@ public class Data {
             re = rand.nextGaussian();
             im = rand.nextGaussian();
 
-            data.setBool(b, count, 0);
-            data.setInt(i, count, 1);
-            data.setWord(l, count, 2);
-            data.setStr(s, count, 3);
-            data.setValue(d, count, 4);
-            data.setComplex(re, im, count, 5);
+            d1.setBool(b, count, 0);
+            d1.setInt(i, count, 1);
+            d1.setWord(l, count, 2);
+            d1.setStr(s, count, 3);
+            d1.setValue(d, count, 4);
+            d1.setComplex(re, im, count, 5);
 
-            assert b == data.getBool(count, 0);
-            assert i == data.getInt(count, 1);
-            assert l == data.getWord(count, 2);
-            assert s.equals(data.getStr(count, 3));
-            assert d == data.getValue(count, 4);
-            c = data.getComplex(count, 5);
+            assert b == d1.getBool(count, 0);
+            assert i == d1.getInt(count, 1);
+            assert l == d1.getWord(count, 2);
+            assert s.equals(d1.getStr(count, 3));
+            assert d == d1.getValue(count, 4);
+            c = d1.getComplex(count, 5);
             assert re == c.real;
             assert im == c.imag;
         }
         System.out.println("List of Cluster okay.");
-        System.out.println(data.pretty());
+        System.out.println(d1.pretty());
 
-        flat = data.flatten();
-        data2 = unflatten(flat, "*(biwsv[m]c[m/s])");
-        System.out.println(data2.pretty());
+        flat = d1.flatten();
+        d2 = unflatten(flat, "*(biwsv[m]c[m/s])");
+        System.out.println(d2.pretty());
 
         // test multi-dimensional list
-        data = new Data("*2i");
-        data.setArrayShape(4, 3);
+        d1 = new Data("*2i");
+        d1.setArrayShape(4, 3);
         for (int m = 0; m < 4; m++) {
             for (int n = 0; n < 3; n++) {
-                data.setInt(rand.nextInt(), m, n);
+                d1.setInt(rand.nextInt(), m, n);
             }
         }
-        System.out.println(data.pretty());
-        flat = data.flatten();
-        data2 = unflatten(flat, "*2i");
-        System.out.println(data2.pretty());
+        System.out.println(d1.pretty());
+        flat = d1.flatten();
+        d2 = unflatten(flat, "*2i");
+        System.out.println(d2.pretty());
 
-        data = new Data("*3s");
-        data.setArrayShape(2, 2, 2);
+        d1 = new Data("*3s");
+        d1.setArrayShape(2, 2, 2);
         for (int m = 0; m < 2; m++) {
             for (int n = 0; n < 2; n++) {
                 for (int p = 0; p < 2; p++) {
-                    data.setStr("TestString(" + m + n + p + ")", m, n, p);
+                    d1.setStr("TestString(" + m + n + p + ")", m, n, p);
                 }
             }
         }
-        System.out.println(data.pretty());
-        flat = data.flatten();
-        data2 = unflatten(flat, "*3s");
-        System.out.println(data2.pretty());
+        System.out.println(d1.pretty());
+        flat = d1.flatten();
+        d2 = unflatten(flat, "*3s");
+        System.out.println(d2.pretty());
 
         System.out.println("done.");
     }
