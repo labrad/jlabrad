@@ -4,7 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-public class ByteManip {
+class ByteManip {
 	/**
 	 * 
 	 * @param bv

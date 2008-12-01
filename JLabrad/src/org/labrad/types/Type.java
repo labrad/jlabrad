@@ -1,82 +1,74 @@
 package org.labrad.types;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Vector;
 
 // TODO: add a function to find types for generic java data
 
-public class Type {
+public abstract class Type {
 
-    private static final Type[] TYPE_ARRAY = {};
-    private static Map<String, Type> cache = new HashMap<String, Type>();
+	@SuppressWarnings("serial")
+	private static class Cache extends LinkedHashMap<String, Type> {
+		private static final int CACHE_SIZE = 100;
+		
+		@Override
+		protected boolean removeEldestEntry(Map.Entry<String, Type> eldest) {
+			return size() > CACHE_SIZE;
+		}
+	}
+	
+    private static Cache cache = new Cache();
 
-    public static final Type HEADER_TYPE = parse("wwiww");
-    public static final Type PACKET_TYPE = parse("wwiws");
-    public static final Type RECORD_TYPE = parse("wss");
+    public static final Type HEADER_TYPE = fromTag("wwiww");
+    public static final Type PACKET_TYPE = fromTag("wwiws");
+    public static final Type RECORD_TYPE = fromTag("wss");
 
     // TODO: add comment handling
 
-    public static class Buffer {
+    /**
+     * Buffer encapsulates a string and a position within the
+     * string that is currently being read.  We can pick off
+     * characters one by one, or 'peek' ahead at the next character
+     * without removing it.
+     */
+    private static class Buffer {
         String s;
 
-        public Buffer(String s) {
-            this.s = s;
-        }
+        public Buffer(String s) { this.s = s; }
 
-        char getChar() {
-            String c = get();
-            return c.charAt(0);
-        }
-
-        String get() {
-            return get(1);
-        }
-
+        String get() { return get(1); }
         String get(int i) {
             String temp = s.substring(0, i);
             s = s.substring(i);
             return temp;
         }
+        char getChar() { return get().charAt(0); }
+        
+        String peek() { return peek(1); }
+        String peek(int i) { return s.substring(0, i); }
+        char peekChar() { return s.charAt(0); }
+        
+        void skip() { skip(1); }
+        void skip(int i) { s = s.substring(i); }
 
-        char peekChar() {
-            return s.charAt(0);
-        }
+        int length() { return s.length(); }
 
-        String peek() {
-            return peek(1);
-        }
-
-        String peek(int i) {
-            return s.substring(0, i);
-        }
-
-        void skip() {
-            skip(1);
-        }
-
-        void skip(int i) {
-            s = s.substring(i);
-        }
-
-        int length() {
-            return s.length();
-        }
-
-        public String toString() {
-            return s;
-        }
+        public String toString() { return s; }
     }
 
-    public Type() {
-    }
-
-    public static Type parse(String tag) {
+    /**
+     * Get a type object from a tag string.
+     * @param tag
+     * @return
+     */
+    public static Type fromTag(String tag) {
+    	// TODO: this caching scheme is not thread-safe
         if (cache.containsKey(tag)) {
             return cache.get(tag);
         }
         Type type;
-        Vector<Type> subtypes = new Vector<Type>();
+        java.util.List<Type> subtypes = new ArrayList<Type>();
         Buffer tb = new Buffer(tag);
         while (tb.length() > 0) {
             subtypes.add(parseSingleType(tb));
@@ -91,13 +83,18 @@ public class Type {
                 break;
 
             default:
-                type = new Cluster(subtypes.toArray(TYPE_ARRAY));
+                type = Cluster.of(subtypes);
                 break;
         }
         cache.put(tag, type);
         return type;
     }
 
+    /**
+     * Parse a single type from a buffer that may contain a cluster of types.
+     * @param tb
+     * @return
+     */
     private static Type parseSingleType(Buffer tb) {
         String units;
         if (tb.length() == 0) {
@@ -113,10 +110,10 @@ public class Type {
             case 't': return Time.getInstance();
             case 'v':
                 units = parseUnits(tb);
-                return new Value(units);
+                return Value.of(units);
             case 'c':
                 units = parseUnits(tb);
-                return new Complex(units);
+                return Complex.of(units);
             case '(': return parseCluster(tb);
             case '*': return parseList(tb);
             case 'E': return parseError(tb);
@@ -124,22 +121,34 @@ public class Type {
         throw new RuntimeException("Unknown character in type tag.");
     }
 
+    /**
+     * Parse a cluster of types by repeatedly parsing single types until
+     * a close parenthesis is encountered.
+     * @param tb
+     * @return
+     */
     private static Type parseCluster(Buffer tb) {
-        Vector<Type> subtypes = new Vector<Type>();
+        java.util.List<Type> subTypes = new ArrayList<Type>();
         while (tb.length() > 0) {
             if (tb.peekChar() == ')') {
                 tb.getChar();
-                return new Cluster(subtypes.toArray(TYPE_ARRAY));
+                return Cluster.of(subTypes);
             }
-            subtypes.add(parseSingleType(tb));
+            subTypes.add(parseSingleType(tb));
         }
         throw new RuntimeException("No closing ) found.");
     }
 
+    /**
+     * Parse a list by parsing an optional depth indicator,
+     * followed by the element type.
+     * @param tb
+     * @return
+     */
     private static Type parseList(Buffer tb) {
         int depth = 0, nDigits = 0;
         while (Character.isDigit(tb.peekChar())) {
-            depth = depth * 10 + Integer.parseInt(tb.get());
+            depth = depth * 10 + Integer.valueOf(tb.get());
             nDigits += 1;
         }
         if (depth == 0) {
@@ -149,14 +158,24 @@ public class Type {
             depth = 1;
         }
         Type elementType = parseSingleType(tb);
-        return new List(elementType, depth);
+        return List.of(elementType, depth);
     }
 
+    /**
+     * Parse an error type that may contain an optional payload.
+     * @param tb
+     * @return
+     */
     private static Type parseError(Buffer tb) {
         Type payloadType = parseSingleType(tb);
-        return new Error(payloadType);
+        return Error.of(payloadType);
     }
 
+    /**
+     * Parse units for value and complex types.
+     * @param tb
+     * @return
+     */
     private static String parseUnits(Buffer tb) {
         String units = "";
         char c;
@@ -174,25 +193,15 @@ public class Type {
         throw new RuntimeException("No closing ] found.");
     }
 
-    public String pretty() {
-        throw new RuntimeException("Unknown type.");
-    }
+    public abstract String pretty();
 
-    public String toString() {
-        throw new RuntimeException("Unknown type.");
-    }
+    public abstract String toString();
 
-    public char getCode() {
-        return 0;
-    }
+    public char getCode() { return 0; }
 
-    public boolean isFixedWidth() {
-        return true;
-    }
+    public boolean isFixedWidth() { return true; }
 
-    public int dataWidth() {
-        return 0;
-    }
+    public int dataWidth() { return 0; }
 
     public Type getSubtype(int index) {
         throw new RuntimeException("No subtypes.");
@@ -218,7 +227,7 @@ public class Type {
         String[] tests = { "b", "i", "w", "is", "*(is)", "v", "v[]", "v[m/s]",
                 "", "?", "*?", "*2?", "(s?)" };
         for (String s : tests) {
-            Type t = parse(s);
+            Type t = fromTag(s);
             System.out.println("original: " + s);
             System.out.println("parsed: " + t.toString());
             System.out.println("pretty: " + t.pretty());

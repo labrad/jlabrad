@@ -51,7 +51,7 @@ public class Connection {
             packet = is.readPacket();
             System.out.println("got packet: " + packet.toString());
 
-            data = new Data("ws").setWord(1, 0).setStr("Java Client", 1);
+            data = new Data("ws").setWord(1, 0).setString("Java Client", 1);
             os.writePacket(new Context(1, 1), target, request, new Record(0,
                     data));
 
@@ -62,7 +62,7 @@ public class Connection {
             System.out.println("My ID is: " + ID);
 
             // lookup hydrant server
-            data = new Data("s").setStr("Hydrant Server");
+            data = new Data("s").setString("Hydrant Server");
             os.writePacket(new Packet(new Context(0, 1), 1, request,
                     new Record(3, data)));
             packet = is.readPacket();

@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.labrad.data.Context;
@@ -14,12 +14,14 @@ import org.labrad.data.PacketInputStream;
 import org.labrad.data.PacketOutputStream;
 import org.labrad.data.Record;
 import org.labrad.errors.IncorrectPasswordException;
+import org.labrad.errors.LabradException;
 
 public class SimpleClient {
 	private static final String ENCODING = "ISO-8859-1";
 	private static final long MANAGER = 1;
 	private static final long LOOKUP = 3;
 	private static final long PROTOCOL = 1;
+	private static final String NAME = "Java SimpleClient";
 	
 	private static final String DEFAULT_HOST = "localhost";
 	private static final String DEFAULT_PORT = "7682";
@@ -36,9 +38,16 @@ public class SimpleClient {
 	private static final Context defaultCtx = new Context(0, 0);
 	private long nextContext = 1;
 	
-	Hashtable<String, Long> serverCache = new Hashtable<String, Long>();
-	Hashtable<Long, Hashtable<String, Long>> settingCache = new Hashtable<Long, Hashtable<String, Long>>();
+	Map<String, Long> serverCache = new HashMap<String, Long>();
+	Map<Long, Map<String, Long>> settingCache = 
+		new HashMap<Long, Map<String, Long>>();
 	
+	/**
+	 * Get an environment variable, or fall back on the given default if not found.
+	 * @param key
+	 * @param defaultVal
+	 * @return
+	 */
 	private String getEnv(String key, String defaultVal) {
 		Map<String, String> env = System.getenv();
 		if (env.containsKey(key)) {
@@ -68,19 +77,24 @@ public class SimpleClient {
     }
 
     public void connect(String host)
-                   throws IOException, IncorrectPasswordException {
+                    throws IOException, IncorrectPasswordException {
         connect(host, Integer.parseInt(getEnv("LABRADPORT", DEFAULT_PORT)));
     }
 
     public void connect(String host, int port)
                     throws IOException, IncorrectPasswordException {
         if (password == null) {
-            doConnect(host, port, getEnv("LABRADPASSWORD", ""));
+            connect(host, port, getEnv("LABRADPASSWORD", ""));
         } else {
-            doConnect(host, port, password);
+            connect(host, port, password);
         }
     }
 
+    public void connect(String host, int port, String password)
+	    throws IOException, IncorrectPasswordException {
+    	doConnect(host, port, password);
+	}
+    
     private void doConnect(String host, int port, String password)
                     throws IOException, IncorrectPasswordException {
         if (connected) {
@@ -113,11 +127,10 @@ public class SimpleClient {
             }
             
             // print welcome message
-            System.out.println(response[0].getData().getStr());
+            System.out.println(response[0].getData().getString());
 
             // send identification packet
-            data = new Data("ws").setWord(PROTOCOL, 0)
-                                 .setStr("Java SimpleClient", 1);
+            data = new Data("ws").setWord(PROTOCOL, 0).setString(NAME, 1);
             response = sendRequest(new Record(0, data));
             ID = response[0].getData().getWord();
 
@@ -140,20 +153,36 @@ public class SimpleClient {
         connected = false;
     }
 
+    /**
+     * Lookup the ID of a server, pulling from the cache if we already know it.
+     * @param server
+     * @return
+     * @throws IOException
+     */
     private long lookupServer(String server) throws IOException {
         ensureConnection();
         if (serverCache.containsKey(server)) {
             return serverCache.get(server);
         }
-        Record[] response = sendRequest(
-        		new Record(LOOKUP, new Data("s").setStr(server)));
-        long ID = response[0].getData().getWord();
+        Data response = sendRequest(
+        		new Record(LOOKUP, new Data("s").setString(server)))[0].getData();
+        if (response.isError()) {
+        	throw new LabradException(response);
+        }
+        long ID = response.getWord();
         serverCache.put(server, ID);
-        settingCache.put(ID, new Hashtable<String, Long>());
+        settingCache.put(ID, new HashMap<String, Long>());
         return ID;
     }
 
-    private long[] lookupSettings(long serverID, String... settings)
+    /**
+     * Lookup IDs for a list of settings on the specified server.
+     * @param serverID
+     * @param settings
+     * @return
+     * @throws IOException
+     */
+    private long[] lookupSettings(long serverID, String[] settings)
             throws IOException {
         ensureConnection();
         long[] IDs = new long[settings.length];
@@ -161,10 +190,13 @@ public class SimpleClient {
         String[] lookups = new String[settings.length];
         int nLookups = 0;
 
-        if (!settingCache.containsKey(serverID)) {
-            settingCache.put(serverID, new Hashtable<String, Long>());
+        Map<String, Long> cache;
+        if (settingCache.containsKey(serverID)) {
+        	cache = settingCache.get(serverID);
+        } else {
+        	cache = new HashMap<String, Long>();
+            settingCache.put(serverID, cache);
         }
-        Hashtable<String, Long> cache = settingCache.get(serverID);
 
         for (int i = 0; i < settings.length; i++) {
             String key = settings[i];
@@ -177,22 +209,22 @@ public class SimpleClient {
             }
         }
 
-        if (nLookups == 0) {
-            return IDs;
-        }
-
-        Data data = new Data("w*s");
-        data.setWord(serverID, 0);
-        data.setArraySize(nLookups, 1);
-        for (int i = 0; i < nLookups; i++) {
-            data.setStr(lookups[i], 1, i);
-        }
-        Record[] response = sendRequest(new Record(LOOKUP, data));
-
-        for (int i = 0; i < nLookups; i++) {
-            long ID = response[0].getData().getWord(1, i);
-            cache.put(lookups[i], ID);
-            IDs[indices[i]] = ID;
+        if (nLookups > 0) {
+	        Data data = new Data("w*s");
+	        data.setWord(serverID, 0);
+	        data.setArraySize(nLookups, 1);
+	        for (int i = 0; i < nLookups; i++) {
+	            data.setString(lookups[i], 1, i);
+	        }
+	        Data response = sendRequest(new Record(LOOKUP, data))[0].getData();
+	        if (response.isError()) {
+	        	throw new LabradException(response);
+	        }
+	        for (int i = 0; i < nLookups; i++) {
+	            long ID = response.getWord(1, i);
+	            cache.put(lookups[i], ID);
+	            IDs[indices[i]] = ID;
+	        }
         }
         return IDs;
     }
@@ -267,11 +299,11 @@ public class SimpleClient {
         long start, end;
 
         String server = "Python Test Server";
-        String setting = "get_random_data";
+        String setting = "Get Random Data";
         
         // connect to LabRAD
         SimpleClient sc = new SimpleClient();
-        sc.connect("localhost");
+        sc.connect("localhost", 7682, "martinisgroup");
         
         // lookup hydrant server
         ServerProxy hydrant = sc.getServer(server);

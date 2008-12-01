@@ -52,7 +52,7 @@ public class PacketInputStream extends FilterInputStream {
         while (is.available() > 0) {
             Data recdata = Data.unflatten(is, Type.RECORD_TYPE);
             long ID = recdata.getWord(0);
-            String tag = recdata.getStr(1);
+            String tag = recdata.getString(1);
             byte[] data = recdata.getBytes(2);
             records.add(new Record(ID, Data.unflatten(data, tag)));
         }

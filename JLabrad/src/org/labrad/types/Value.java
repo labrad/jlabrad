@@ -3,37 +3,32 @@ package org.labrad.types;
 public class Value extends Type {
     String units;
 
-    public Value(String units) {
-        this.units = units;
+    /**
+     * Factory to create a Value type in the specified units.
+     * Note that units can be null to indicate no units.  This
+     * is different from the empty string "", which indicates
+     * a dimensionless quantity.
+     * @param units
+     * @return
+     */
+    public static Value of(String units) {
+    	return new Value(units);
     }
+    
+    private Value(String units) { this.units = units; }
 
-    public boolean isFixedWidth() {
-        return true;
-    }
+    public boolean isFixedWidth() { return true; }
+    public int dataWidth() { return 8; }
 
-    public int dataWidth() {
-        return 8;
-    }
+    public String getUnits() { return units; }
 
-    public String getUnits() {
-        return units;
-    }
-
-    public char getCode() {
-        return 'v';
-    }
+    public char getCode() { return 'v'; }
 
     public String toString() {
-        if (units == null) {
-            return "v";
-        }
-        return "v[" + units + "]";
+    	return "v" + (units == null ? "" : "[" + units + "]");
     }
 
     public String pretty() {
-        if (units == null) {
-            return "value";
-        }
-        return "value[" + units + "]";
+    	return "value" + (units == null ? "" : "[" + units + "]");
     }
 }

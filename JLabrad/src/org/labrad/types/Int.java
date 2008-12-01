@@ -3,27 +3,16 @@ package org.labrad.types;
 public class Int extends Type {
     private static Int instance = new Int();
 
-    public static Int getInstance() {
-        return instance;
-    }
+    // private constructor to prevent instantiation
+    private Int() {}
 
-    public char getCode() {
-        return 'i';
-    }
+    public static Int getInstance() { return instance; }
 
-    public boolean isFixedWidth() {
-        return true;
-    }
+    public char getCode() { return 'i'; }
 
-    public int dataWidth() {
-        return 4;
-    }
+    public boolean isFixedWidth() { return true; }
+    public int dataWidth() { return 4; }
 
-    public String toString() {
-        return "i";
-    }
-
-    public String pretty() {
-        return "int";
-    }
+    public String toString() { return "i"; }
+    public String pretty() { return "int"; }
 }

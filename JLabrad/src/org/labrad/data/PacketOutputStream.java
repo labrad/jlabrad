@@ -32,7 +32,7 @@ public class PacketOutputStream extends BufferedOutputStream {
         for (Record rec : records) {
             Data recData = new Data(Type.RECORD_TYPE);
             recData.setWord(rec.getID(), 0);
-            recData.setStr(rec.getData().getTag(), 1);
+            recData.setString(rec.getData().getTag(), 1);
             recData.setBytes(rec.getData().flatten(), 2);
             os.write(recData.flatten());
         }

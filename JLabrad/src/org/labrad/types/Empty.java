@@ -3,19 +3,13 @@ package org.labrad.types;
 public class Empty extends Type {
     private static Empty instance = new Empty();
 
-    public static Empty getInstance() {
-        return instance;
-    }
+    // private constructor to prevent instantiation
+    private Empty() {}
 
-    public char getCode() {
-        return '_';
-    }
+    public static Empty getInstance() { return instance; }
 
-    public String toString() {
-        return "";
-    }
+    public char getCode() { return '_'; }
 
-    public String pretty() {
-        return "empty";
-    }
+    public String toString() { return ""; }
+    public String pretty() { return "empty"; }
 }

@@ -1,47 +1,61 @@
 package org.labrad.types;
 
+import java.util.Arrays;
+import java.util.List;
+
 public class Cluster extends Type {
 
-    Type[] elementTypes;
-    int _dataWidth;
-    boolean _isFixedWidth;
-    int[] _offsets;
-    String _toString;
+    List<Type> elementTypes;
+    int width;
+    boolean fixedWidth;
+    int[] offsets;
+    String string;
     
-    public Cluster(Type... elementTypes) {
+    /**
+     * Create a new cluster from an array of element types.
+     * @param elementTypes
+     * @return
+     */
+    public static Cluster of(Type... elementTypes) {
+    	return new Cluster(Arrays.asList(elementTypes));
+    }
+
+    /**
+     * Create a new cluster from a list of element types.
+     * @param elementTypes
+     * @return
+     */
+    public static Cluster of(List<Type> elementTypes) {
+    	return new Cluster(elementTypes);
+    }
+    
+	private Cluster(List<Type> elementTypes) {
         this.elementTypes = elementTypes;
         
-        _dataWidth = 0;
-        _isFixedWidth = true;
-        _toString = "";
-        _offsets = new int[elementTypes.length];
+        width = 0;
+        fixedWidth = true;
+        string = "";
+        offsets = new int[elementTypes.size()];
         
         int ofs = 0;
         
-        for (int i = 0; i < elementTypes.length; i++) {
-        	Type t = elementTypes[i];
-        	_dataWidth += t.dataWidth();
+        for (int i = 0; i < elementTypes.size(); i++) {
+        	Type t = elementTypes.get(i);
+        	width += t.dataWidth();
         	if (!t.isFixedWidth()) {
-        		_isFixedWidth = false;
+        		fixedWidth = false;
         	}
-        	_toString += t.toString();
-        	_offsets[i] = ofs;
+        	string += t.toString();
+        	offsets[i] = ofs;
         	ofs += t.dataWidth();
         }
-        _toString = "(" + _toString + ")";
+        string = "(" + string + ")";
     }
     
-    public boolean isFixedWidth() {
-        return _isFixedWidth;
-    }
+    public boolean isFixedWidth() { return fixedWidth;}
+    public int dataWidth() { return width; }
 
-    public int dataWidth() {
-        return _dataWidth;
-    }
-
-    public String toString() {
-        return _toString;
-    }
+    public String toString() { return string; }
 
     public String pretty() {
         String s = "";
@@ -51,19 +65,8 @@ public class Cluster extends Type {
         return "cluster(" + s.substring(2) + ")";
     }
 
-    public char getCode() {
-        return '(';
-    }
-
-    public Type getSubtype(int index) {
-        return elementTypes[index];
-    }
-
-    public int size() {
-        return elementTypes.length;
-    }
-
-    public int getOffset(int index) {
-        return _offsets[index];
-    }
+    public char getCode() { return '('; }
+    public Type getSubtype(int index) { return elementTypes.get(index); }
+    public int size() { return elementTypes.size(); }
+    public int getOffset(int index) { return offsets[index]; }
 }

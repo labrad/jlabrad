@@ -1,6 +1,6 @@
 package org.labrad.data;
 
-public class ByteArrayView {
+class ByteArrayView {
 	private final byte[] bytes;
 	private final int offset;
 	

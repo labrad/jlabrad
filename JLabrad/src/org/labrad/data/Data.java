@@ -4,53 +4,63 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
-import java.util.Vector;
 
 import org.labrad.types.Type;
 
 /**
  * The Data class encapsulates the data format used to communicate between
- * LabRAD servers and clients.  This data format is strongly based on the
+ * LabRAD servers and clients.  This data format is based on the
  * capabilities of LabVIEW, from National Instruments.  Each piece of LabRAD
  * data has a Type object which is specified by a String type tag.
  */
 public class Data {
-    private static final String ENCODING = "ISO-8859-1";
+    public static final String STRING_ENCODING = "ISO-8859-1";
     public static final Data EMPTY = new Data("");
 
     Type type;
     byte[] data;
     int ofs;
-    Vector<byte[]> heap;
+    List<byte[]> heap;
 
     /**
      * Construct a Data object for a given LabRAD type tag.
      * 
      * @param tag
-     *            the LabRAD type tag of this Data object.
+     *            the LabRAD type tag of this Data object
      */
     public Data(String tag) {
-        this(Type.parse(tag));
+        this(Type.fromTag(tag));
     }
 
     /**
      * Construct a Data object for a given Type object.
      * 
      * @param tag
-     *            the LabRAD Type of this Data object.
+     *            the LabRAD Type of this Data object
      */
     public Data(Type type) {
         this.type = type;
-        data = new byte[type.dataWidth()];
+        data = getFilledByteArray(type.dataWidth());
         ofs = 0;
-        heap = new Vector<byte[]>();
+        heap = new ArrayList<byte[]>();
     }
 
+    private static byte[] getFilledByteArray(int length) {
+    	byte[] data = new byte[length];
+    	Arrays.fill(data, (byte) 0xff);
+    	return data;
+    }
+    
     /**
-     * Construct a Data object from a Type and raw data. This constructor is
-     * used internally in unflattening, and also to construct "views" into a
-     * pre-existing Data object.
+     * Construct a Data object from a Type and raw data.
+     * 
+     * This constructor is used internally in unflattening,
+     * and also to construct "views" into a pre-existing
+     * Data object.
      * 
      * @param type
      *            a Type object, a parsed version of the LabRAD type tag
@@ -61,7 +71,7 @@ public class Data {
      * @param heap
      *            storage for pieces of variable-length data
      */
-    private Data(Type type, byte[] data, int ofs, Vector<byte[]> heap) {
+    private Data(Type type, byte[] data, int ofs, List<byte[]> heap) {
         this.type = type;
         this.data = data;
         this.ofs = ofs;
@@ -110,8 +120,7 @@ public class Data {
      * @throws IOException
      */
     private void flatten(ByteArrayOutputStream os, Type type,
-    		             byte[] buf, int ofs, Vector<byte[]> heap) throws IOException {
-        int i;
+    		             byte[] buf, int ofs, List<byte[]> heap) throws IOException {
         switch (type.getCode()) {
             case '_': break; // do nothing for empty data
             case 'b': os.write(buf, ofs, 1); break;
@@ -131,28 +140,38 @@ public class Data {
                 int depth = type.getDepth();
                 Type elementType = type.getSubtype(0);
                 int size = 1;
-                for (i = 0; i < depth; i++) {
+                for (int i = 0; i < depth; i++) {
                     size *= ByteManip.getInt(buf, ofs + 4 * i);
                 }
                 os.write(buf, ofs, 4 * depth);
                 // write data from array
                 byte[] lbuf = heap.get(ByteManip.getInt(buf, ofs + 4 * depth));
-                for (i = 0; i < size; i++) {
-                    flatten(os, elementType, lbuf, elementType.dataWidth() * i,
-                            heap);
+                if (elementType.isFixedWidth()) {
+                	// for fixed-width data, just copy in one big chunk
+                	os.write(lbuf, 0, elementType.dataWidth() * size);
+                } else {
+                	// for variable-width data, flatten recursively
+	                for (int i = 0; i < size; i++) {
+	                    flatten(os, elementType, lbuf, elementType.dataWidth() * i,
+	                            heap);
+	                }
                 }
                 break;
 
             case '(':
-                for (i = 0; i < type.size(); i++) {
-                    flatten(os, type.getSubtype(i), buf, ofs
-                            + type.getOffset(i), heap);
-                }
+            	if (type.isFixedWidth()) {
+            		os.write(buf, ofs, type.dataWidth());
+            	} else {
+	                for (int i = 0; i < type.size(); i++) {
+	                    flatten(os, type.getSubtype(i), buf,
+	                    		ofs + type.getOffset(i), heap);
+	                }
+            	}
                 break;
 
             case 'E':
                 String tag = "is" + type.getSubtype(0).toString();
-                flatten(os, Type.parse(tag), buf, ofs, heap);
+                flatten(os, Type.fromTag(tag), buf, ofs, heap);
                 break;
 
             default:
@@ -170,7 +189,7 @@ public class Data {
      */
     public static Data unflatten(byte[] buf, String tag) throws IOException {
         ByteArrayInputStream is = new ByteArrayInputStream(buf);
-        Type type = Type.parse(tag);
+        Type type = Type.fromTag(tag);
         return unflatten(is, type);
     }
 
@@ -197,7 +216,7 @@ public class Data {
      */
     public static Data unflatten(ByteArrayInputStream is, String tag)
             throws IOException {
-        Type type = Type.parse(tag);
+        Type type = Type.fromTag(tag);
         return unflatten(is, type);
     }
 
@@ -211,8 +230,8 @@ public class Data {
      */
     public static Data unflatten(ByteArrayInputStream is, Type type)
             throws IOException {
-        byte[] data = new byte[type.dataWidth()];
-        Vector<byte[]> heap = new Vector<byte[]>();
+    	byte[] data = new byte[type.dataWidth()];
+        List<byte[]> heap = new ArrayList<byte[]>();
         unflatten(is, type, data, 0, heap);
         return new Data(type, data, 0, heap);
     }
@@ -229,8 +248,7 @@ public class Data {
      * @throws IOException
      */
     private static void unflatten(ByteArrayInputStream is, Type type,
-            byte[] buf, int ofs, Vector<byte[]> heap) throws IOException {
-        int i;
+            byte[] buf, int ofs, List<byte[]> heap) throws IOException {
         switch (type.getCode()) {
             case '_': break; // do nothing for empty data
             case 'b': is.read(buf, ofs, 1); break;
@@ -254,28 +272,36 @@ public class Data {
                 int elementWidth = elementType.dataWidth();
                 is.read(buf, ofs, 4 * depth);
                 int size = 1;
-                for (i = 0; i < depth; i++) {
+                for (int i = 0; i < depth; i++) {
                     size *= ByteManip.getInt(buf, ofs + 4 * i);
                 }
                 byte[] lbuf = new byte[elementWidth * size];
                 ByteManip.setInt(buf, ofs + 4 * depth, heap.size());
                 heap.add(lbuf);
-                for (i = 0; i < size; i++) {
-                    unflatten(is, type.getSubtype(0), lbuf, elementWidth * i,
-                            heap);
+                if (elementType.isFixedWidth()) {
+                	is.read(lbuf, 0, elementWidth * size);
+                } else {
+	                for (int i = 0; i < size; i++) {
+	                    unflatten(is, type.getSubtype(0), lbuf, elementWidth * i,
+	                            heap);
+	                }
                 }
                 break;
 
             case '(':
-                for (i = 0; i < type.size(); i++) {
-                    unflatten(is, type.getSubtype(i), buf, ofs
-                            + type.getOffset(i), heap);
-                }
+            	if (type.isFixedWidth()) {
+            		is.read(buf, ofs, type.dataWidth());
+            	} else {
+	                for (int i = 0; i < type.size(); i++) {
+	                    unflatten(is, type.getSubtype(i), buf, ofs
+	                            + type.getOffset(i), heap);
+	                }
+            	}
                 break;
 
             case 'E':
                 String tag = "is" + type.getSubtype(0).toString();
-                unflatten(is, Type.parse(tag), buf, ofs, heap);
+                unflatten(is, Type.fromTag(tag), buf, ofs, heap);
                 break;
 
             default:
@@ -283,6 +309,14 @@ public class Data {
         }
     }
 
+    public String toString(int... indices) {
+    	return getData(indices).toString();
+    }
+    
+    public String toString() {
+    	return "Data(\"" + type.toString() + "\")";
+    }
+    
     /**
      * Return a human-readable, pretty-printed version of this LabRAD data,
      * or some indexed subpart of it.
@@ -320,8 +354,7 @@ public class Data {
                 if (c.imag < 0) {
                     s = Double.toString(c.real) + Double.toString(c.imag) + "i";
                 } else {
-                    s = Double.toString(c.real) + "+" + Double.toString(c.imag)
-                            + "i";
+                    s = Double.toString(c.real) + "+" + Double.toString(c.imag) + "i";
                 }
                 u = type.getUnits();
                 if (u != null) {
@@ -330,7 +363,7 @@ public class Data {
                 return s;
 
             case 't': return getTime().toString();
-            case 's': return "\"" + getStr() + "\"";
+            case 's': return "\"" + getString() + "\"";
 
             case '*':
                 int[] shape = getArrayShape();
@@ -549,29 +582,6 @@ public class Data {
     }
 
     
-    // str
-    public boolean isStr(int... indices) {
-        return getSubtype(indices) instanceof org.labrad.types.Str;
-    }
-
-    public String getStr(int... indices) {
-        try {
-            return new String(getBytes(indices), ENCODING);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("Unsupported string encoding.");
-        }
-    }
-
-    public Data setStr(String data, int... indices) {
-        try {
-            setBytes(data.getBytes(ENCODING), indices);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("Unsupported string encoding.");
-        }
-        return this;
-    }
-
-    
     // bytes
     public boolean isBytes(int... indices) {
         return getSubtype(indices) instanceof org.labrad.types.Str;
@@ -584,9 +594,48 @@ public class Data {
 
     public Data setBytes(byte[] data, int... indices) {
     	getSubtype('s', indices);
-        ByteManip.setInt(getOffset(indices), heap.size());
-        heap.add(data);
+    	ByteArrayView ofs = getOffset(indices);
+    	int heapLocation = ByteManip.getInt(ofs);
+    	if (heapLocation == -1) {
+    		ByteManip.setInt(ofs, heap.size());
+    		heap.add(data);
+    	} else {
+    		heap.set(heapLocation, data);
+    	}
         return this;
+    }
+    
+    
+    // str
+    public boolean isString(int... indices) {
+        return getSubtype(indices) instanceof org.labrad.types.Str;
+    }
+
+    public String getString(int... indices) {
+        try {
+            return new String(getBytes(indices), STRING_ENCODING);
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException("Unsupported string encoding.");
+        }
+    }
+
+    public String getString(String encoding, int... indices) throws UnsupportedEncodingException {
+    	return new String(getBytes(indices), encoding);
+    }
+    
+    public Data setString(String data, int... indices) {
+        try {
+            setBytes(data.getBytes(STRING_ENCODING), indices);
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException("Unsupported string encoding.");
+        }
+        return this;
+    }
+
+    public Data setString(String data, String encoding, int... indices)
+                    throws UnsupportedEncodingException {
+    	setBytes(data.getBytes(encoding), indices);
+    	return this;
     }
 
     
@@ -627,10 +676,13 @@ public class Data {
     	return setComplex(new Complex(re, im), indices);
     }
 
+    
+    // units
     public boolean hasUnits(int... indices) {
         Type type = getSubtype(indices);
-        return ((type instanceof org.labrad.types.Value) || (type instanceof org.labrad.types.Complex))
-                && (type.getUnits() != null);
+        return ((type instanceof org.labrad.types.Value) ||
+        		(type instanceof org.labrad.types.Complex))
+               && (type.getUnits() != null);
     }
 
     public String getUnits(int... indices) {
@@ -703,9 +755,14 @@ public class Data {
             ByteManip.setInt(pos.getBytes(), pos.getOffset() + 4*i, shape[i]);
             size *= shape[i];
         }
-        byte[] buf = new byte[elementType.dataWidth() * size];
-        ByteManip.setInt(pos.getBytes(), pos.getOffset() + 4*depth, heap.size());
-        heap.add(buf);
+        byte[] buf = getFilledByteArray(elementType.dataWidth() * size);
+        int heapIndex = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4*depth);
+        if (heapIndex == -1) {
+        	ByteManip.setInt(pos.getBytes(), pos.getOffset() + 4*depth, heap.size());
+        	heap.add(buf);
+        } else {
+        	heap.set(heapIndex, buf);
+        }
         return this;
     }
 
@@ -735,7 +792,7 @@ public class Data {
         ByteArrayView pos = getOffset(indices);
         int index = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4);
         try {
-            return new String(heap.get(index), ENCODING);
+            return new String(heap.get(index), STRING_ENCODING);
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("Unsupported string encoding.");
         }
@@ -752,9 +809,15 @@ public class Data {
     	getSubtype('E', indices);
         ByteArrayView pos = getOffset(indices);
         ByteManip.setInt(pos.getBytes(), pos.getOffset(), code);
-        ByteManip.setInt(pos.getBytes(), pos.getOffset()+4, heap.size());
         try {
-        	heap.add(message.getBytes(ENCODING));
+        	byte[] buf = message.getBytes(STRING_ENCODING);
+        	int heapIndex = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4);
+            if (heapIndex == -1) {
+            	ByteManip.setInt(pos.getBytes(), pos.getOffset()+4, heap.size());
+            	heap.add(buf);
+            } else {
+            	heap.set(heapIndex, buf);
+            }
         } catch (UnsupportedEncodingException e) {
         	throw new RuntimeException("Unicode encoding exception.");
         }
@@ -824,16 +887,16 @@ public class Data {
         assert d1.getInt() == 100;
 
         d1 = new Data("s");
-        d1.setStr("This is a test.");
-        System.out.println(d1.getStr());
+        d1.setString("This is a test.");
+        System.out.println(d1.getString());
 
         d1 = new Data("*s");
         d1.setArraySize(20);
         for (count = 0; count < 20; count++) {
-            d1.setStr("This is string " + Integer.toString(count), count);
+            d1.setString("This is string " + Integer.toString(count), count);
         }
         for (count = 0; count < 20; count++) {
-            System.out.println(d1.getStr(count));
+            System.out.println(d1.getString(count));
         }
 
         d1 = new Data("biwsvc");
@@ -848,14 +911,14 @@ public class Data {
         d1.setBool(b, 0);
         d1.setInt(i, 1);
         d1.setWord(l, 2);
-        d1.setStr(s, 3);
+        d1.setString(s, 3);
         d1.setValue(d, 4);
         d1.setComplex(re, im, 5);
 
         assert b == d1.getBool(0);
         assert i == d1.getInt(1);
         assert l == d1.getWord(2);
-        assert s.equals(d1.getStr(3));
+        assert s.equals(d1.getString(3));
         assert d == d1.getValue(4);
         Complex c = d1.getComplex(5);
         assert re == c.real;
@@ -877,14 +940,14 @@ public class Data {
             d1.setBool(b, count, 0);
             d1.setInt(i, count, 1);
             d1.setWord(l, count, 2);
-            d1.setStr(s, count, 3);
+            d1.setString(s, count, 3);
             d1.setValue(d, count, 4);
             d1.setComplex(re, im, count, 5);
 
             assert b == d1.getBool(count, 0);
             assert i == d1.getInt(count, 1);
             assert l == d1.getWord(count, 2);
-            assert s.equals(d1.getStr(count, 3));
+            assert s.equals(d1.getString(count, 3));
             assert d == d1.getValue(count, 4);
             c = d1.getComplex(count, 5);
             assert re == c.real;
@@ -915,7 +978,7 @@ public class Data {
         for (int m = 0; m < 2; m++) {
             for (int n = 0; n < 2; n++) {
                 for (int p = 0; p < 2; p++) {
-                    d1.setStr("TestString(" + m + n + p + ")", m, n, p);
+                    d1.setString("TestString(" + m + n + p + ")", m, n, p);
                 }
             }
         }

@@ -2,10 +2,14 @@ package org.labrad.errors;
 
 import org.labrad.data.Data;
 
-public class LabradException extends Exception {
+public class LabradException extends RuntimeException {
     private static final long serialVersionUID = 1L;
     private int code;
     private Data payload;
+    
+    public LabradException(Data error) {
+    	this(error.getErrorCode(), error.getErrorMessage(), error.getErrorPayload());
+    }
     
     public LabradException(int code, String message) {
         this(code, message, Data.EMPTY);
