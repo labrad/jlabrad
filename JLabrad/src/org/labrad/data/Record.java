@@ -29,26 +29,15 @@ public class Record {
         this.data = data;
     }
 
-    public Data getData() {
-    	return data;
-    }
-    
-    public String getName() {
-    	return name;
-    }
-    
-    public long getID() {
-    	return ID;
-    }
-    
-    public boolean needsLookup() {
-        return !lookedUp;
-    }
+    public Data getData() { return data; }
+    public String getName() { return name; }
+    public long getID() { return ID; }
+    public boolean needsLookup() { return !lookedUp; }
 
     public String toString() {
         if (!lookedUp) {
             return "Record(" + name + ", " + data.pretty() + ")";
         }
-        return "Record(" + Long.toString(ID) + ", " + data.pretty() + ")";
+        return "Record(" + ID + ", " + data.pretty() + ")";
     }
 }

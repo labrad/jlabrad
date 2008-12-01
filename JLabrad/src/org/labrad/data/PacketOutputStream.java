@@ -7,12 +7,22 @@ import java.io.OutputStream;
 
 import org.labrad.types.Type;
 
+/**
+ * Output stream that writes LabRAD packets.
+ * @author maffoo
+ *
+ */
 public class PacketOutputStream extends BufferedOutputStream {
 
     public PacketOutputStream(OutputStream out) {
         super(out);
     }
 
+    /**
+     * Writes a packet to the output stream.
+     * @param packet
+     * @throws IOException
+     */
     public void writePacket(Packet packet) throws IOException {
         writePacket(packet.getContext(), packet.getTarget(),
         		    packet.getRequest(), packet.getRecords());
@@ -20,7 +30,7 @@ public class PacketOutputStream extends BufferedOutputStream {
 
     public void writePacket(Context context, long target, int request,
     		Record... records) throws IOException {
-    	writePacket(context.high, context.low, target, request, records);
+    	writePacket(context.getHigh(), context.getLow(), target, request, records);
     }
     
     public void writePacket(long high, long low, long target, int request,

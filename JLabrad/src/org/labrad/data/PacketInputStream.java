@@ -1,22 +1,28 @@
 package org.labrad.data;
 
-import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
-import java.util.Vector;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.labrad.types.Type;
 
 public class PacketInputStream extends FilterInputStream {
 
-    // used for generic method call to convert Vector<Record> into Record[]
+    // used for generic method call to convert List<Record> into Record[]
     private static final Record[] RECORD_ARRAY = {};
     
     public PacketInputStream(InputStream in) {
         super(in);
     }
 
+    /**
+     * Converts a byte array into a hex string.
+     * @param bytes
+     * @return
+     */
     public String dumpBytes(byte[] bytes) {
         int counter = 0;
         String dump = "";
@@ -34,6 +40,11 @@ public class PacketInputStream extends FilterInputStream {
         return dump;
     }
 
+    /**
+     * Reads a single packet from the input stream.
+     * @return
+     * @throws IOException
+     */
     public Packet readPacket() throws IOException {
         long ctxHigh, ctxLow, source, dataLen;
         int request;
@@ -48,7 +59,7 @@ public class PacketInputStream extends FilterInputStream {
 
         byte[] recbuf = readBytes((int)dataLen);
         ByteArrayInputStream is = new ByteArrayInputStream(recbuf);
-        Vector<Record> records = new Vector<Record>();
+        List<Record> records = new ArrayList<Record>();
         while (is.available() > 0) {
             Data recdata = Data.unflatten(is, Type.RECORD_TYPE);
             long ID = recdata.getWord(0);
@@ -60,6 +71,12 @@ public class PacketInputStream extends FilterInputStream {
                           records.toArray(RECORD_ARRAY));
     }
     
+    /**
+     * Reads the specified number of bytes from the input stream.
+     * @param n
+     * @return
+     * @throws IOException
+     */
     private byte[] readBytes(int n) throws IOException {
         byte[] data = new byte[n];
         int bytesRead, totalRead = 0;

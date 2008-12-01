@@ -3,7 +3,7 @@ package org.labrad.types;
 import java.util.Arrays;
 import java.util.List;
 
-public class Cluster extends Type {
+public final class Cluster extends Type {
 
     List<Type> elementTypes;
     int width;
@@ -65,7 +65,8 @@ public class Cluster extends Type {
         return "cluster(" + s.substring(2) + ")";
     }
 
-    public char getCode() { return '('; }
+    public Type.Code getCode() { return Type.Code.CLUSTER; }
+    public char getChar() { return '('; }
     public Type getSubtype(int index) { return elementTypes.get(index); }
     public int size() { return elementTypes.size(); }
     public int getOffset(int index) { return offsets[index]; }

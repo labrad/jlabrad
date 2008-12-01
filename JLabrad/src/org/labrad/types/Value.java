@@ -1,6 +1,6 @@
 package org.labrad.types;
 
-public class Value extends Type {
+public final class Value extends Type {
     String units;
 
     /**
@@ -22,7 +22,8 @@ public class Value extends Type {
 
     public String getUnits() { return units; }
 
-    public char getCode() { return 'v'; }
+    public Type.Code getCode() { return Type.Code.VALUE; }
+    public char getChar() { return 'v'; }
 
     public String toString() {
     	return "v" + (units == null ? "" : "[" + units + "]");

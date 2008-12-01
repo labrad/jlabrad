@@ -1,0 +1,21 @@
+Data
+- methods for vectorized array setting
+- methods for quick creation of basic data types
+- method to copy (clone?) a Data object
+- method to construct a cluster from a bunch of other data objects (by copying them?)
+
+Client
+- add lookup functionality and caching
+- get rid of SimpleClient altogether (while making Client as easy to use for the simple case)
+- add some message dispatching capabilities
+
+Server
+- create annotations to mark server methods
+
+GUI
+- add swing compatibility,
+  in particular the ability to fire events when requests complete or messages are received
+- see what can be done about using the event loop (AWT or Swing) without a GUI
+
+Examples
+- write some example clients and servers

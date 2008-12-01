@@ -25,29 +25,16 @@ public class Packet {
             }
             recStr = recStr.substring(2);
         }
-        return "Packet(" + "context=" + context.toString() + ", target="
-                + Long.toString(target) + ", request="
-                + Integer.toString(request) + ", records=[" + recStr + "]"
-                + ")";
+        return "Packet(" + "context=" + context.toString()
+                         + ", target=" + Long.toString(target)
+                         + ", request=" + Integer.toString(request)
+                         + ", records=[" + recStr + "]" + ")";
     }
 
-    public Record[] getRecords() {
-        return records;
-    }
-
-    public Record getRecord(int index) {
-        return records[index];
-    }
-
-	public Context getContext() {
-		return context;
-	}
-
-	public long getTarget() {
-		return target;
-	}
-
-	public int getRequest() {
-		return request;
-	}
+    public int size() { return records.length; }
+    public Record[] getRecords() { return records; }
+    public Record getRecord(int index) { return records[index]; }
+	public Context getContext() { return context; }
+	public long getTarget() { return target; }
+	public int getRequest() { return request; }
 }

@@ -1,6 +1,6 @@
 package org.labrad.types;
 
-public class List extends Type {
+public final class List extends Type {
     Type elementType;
 
     int depth;
@@ -54,7 +54,8 @@ public class List extends Type {
                 + ")";
     }
 
-    public char getCode() { return '*'; }
+    public Type.Code getCode() { return Type.Code.LIST; }
+    public char getChar() { return '*'; }
 
     public int getDepth() { return depth; }
 

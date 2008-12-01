@@ -1,6 +1,6 @@
 package org.labrad.types;
 
-public class Error extends Type {
+public final class Error extends Type {
     Type payload;
 
     /**
@@ -14,7 +14,8 @@ public class Error extends Type {
     
     private Error(Type payload) { this.payload = payload; }
 
-    public char getCode() { return 'E'; }
+    public Type.Code getCode() { return Type.Code.ERROR; }
+    public char getChar() { return 'E'; }
 
     public boolean isFixedWidth() { return false; }
     public int dataWidth() { return 4 + 4 + payload.dataWidth(); }

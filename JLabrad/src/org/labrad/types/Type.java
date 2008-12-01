@@ -4,10 +4,43 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-// TODO: add a function to find types for generic java data
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
+// TODO add a function to find types for generic java data
+// TODO add comment handling to type tag parsing
 
 public abstract class Type {
 
+	public enum Code {
+		ANY("ANY"),
+		BOOL("BOOL"),
+		CLUSTER("CLUSTER"),
+		COMPLEX("COMPLEX"),
+		EMPTY("EMPTY"),
+		ERROR("ERROR"),
+		INT("INT"),
+		LIST("LIST"),
+		STR("STR"),
+		TIME("TIME"),
+		VALUE("VALUE"),
+		WORD("WORD");
+		
+		String name;
+		
+		Code(String name) {
+			this.name = name;
+		}
+		
+		public String toString() {
+			return name;
+		}
+	}
+	
+	
+	/**
+	 * Encapsulates a cache of type objects.  A LinkedHashMap is used with a finite
+	 * size to prevent the cache from growing without bounds.
+	 */
 	@SuppressWarnings("serial")
 	private static class Cache extends LinkedHashMap<String, Type> {
 		private static final int CACHE_SIZE = 100;
@@ -18,16 +51,24 @@ public abstract class Type {
 		}
 	}
 	
+	/** A cache of parsed type objects. */
     private static Cache cache = new Cache();
+	
+	
+	// types used in parsing and unparsing packets
 
+	/** Packet header type: "w{ctxtHigh} w{ctxtLow} i{request} w{src/tgt} w{dataLen}" */
     public static final Type HEADER_TYPE = fromTag("wwiww");
+    
+    /** Packet type: "w{ctxtHigh} w{ctxtLow} i{request} w{src/tgt} s{data}" */
     public static final Type PACKET_TYPE = fromTag("wwiws");
+    
+    /** Record type: "w{ID} s{typeTag} s{data}" */
     public static final Type RECORD_TYPE = fromTag("wss");
 
-    // TODO: add comment handling
 
     /**
-     * Buffer encapsulates a string and a position within the
+     * Encapsulates a string and a position within the
      * string that is currently being read.  We can pick off
      * characters one by one, or 'peek' ahead at the next character
      * without removing it.
@@ -63,7 +104,7 @@ public abstract class Type {
      * @return
      */
     public static Type fromTag(String tag) {
-    	// TODO: this caching scheme is not thread-safe
+    	// TODO this caching scheme is not thread-safe
         if (cache.containsKey(tag)) {
             return cache.get(tag);
         }
@@ -193,34 +234,70 @@ public abstract class Type {
         throw new RuntimeException("No closing ] found.");
     }
 
+    
+    // instance methods on type objects
+    
+    /**
+     * Returns a verbose string describing this type object.
+     */
     public abstract String pretty();
 
+    /**
+     * Returns a compact string describing this type object.
+     * This string representation is used in flattening and is also
+     * suitable for passing to the Data constructor to create a new
+     * LabRAD data object.
+     */
     public abstract String toString();
 
-    public char getCode() { return 0; }
+    /**
+     * Returns a one-character code for this type object.
+     * @return
+     */
+    public char getChar() { return 0; }
 
+    public Code getCode() {
+    	throw new NotImplementedException();
+    }
+    
+    /**
+     * Indicates whether this type object represents data whose byte length is fixed.
+     * @return
+     */
     public boolean isFixedWidth() { return true; }
 
+    /**
+     * Gives the width of the byte string for data of this type.  Note that if this is
+     * not a fixed-width type, then some of the bytes here are pointers to variable-length
+     * sections.
+     * @return
+     */
     public int dataWidth() { return 0; }
 
+    /**
+     * Gets the subtype of this type at the specified index.  Note that this is only
+     * valid for types that have subtypes, such as lists and clusters.
+     * @param index
+     * @return
+     */
     public Type getSubtype(int index) {
-        throw new RuntimeException("No subtypes.");
+        throw new NotImplementedException();
     }
 
     public int getOffset(int index) {
-        throw new RuntimeException("No element offsets.");
+        throw new NotImplementedException();
     }
 
     public int size() {
-        throw new RuntimeException("No size for this type.");
+        throw new NotImplementedException();
     }
 
     public String getUnits() {
-        throw new RuntimeException("No units.");
+        throw new NotImplementedException();
     }
 
     public int getDepth() {
-        throw new RuntimeException("No depth.");
+        throw new NotImplementedException();
     }
 
     public static void main(String[] args) {

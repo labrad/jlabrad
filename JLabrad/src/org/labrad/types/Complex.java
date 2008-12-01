@@ -1,6 +1,6 @@
 package org.labrad.types;
 
-public class Complex extends Type {
+public final class Complex extends Type {
     String units;
 
     /**
@@ -21,7 +21,8 @@ public class Complex extends Type {
 
     public String getUnits() { return units; }
 
-    public char getCode() { return 'c'; }
+    public Type.Code getCode() { return Type.Code.COMPLEX; }
+    public char getChar() { return 'c'; }
 
     public String toString() {
     	return "c" + (units == null ? "" : "[" + units + "]");

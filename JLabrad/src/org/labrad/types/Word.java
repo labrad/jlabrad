@@ -1,6 +1,6 @@
 package org.labrad.types;
 
-public class Word extends Type {
+public final class Word extends Type {
     private static Word instance = new Word();
 
     // private constructor to prevent instantiation
@@ -8,7 +8,8 @@ public class Word extends Type {
     
     public static Word getInstance() { return instance; }
 
-    public char getCode() { return 'w'; }
+    public Type.Code getCode() { return Type.Code.WORD; }
+    public char getChar() { return 'w'; }
 
     public boolean isFixedWidth() { return true; }
     public int dataWidth() { return 4; }

@@ -1,6 +1,6 @@
 package org.labrad.types;
 
-public class Time extends Type {
+public final class Time extends Type {
     private static Time instance = new Time();
 
     // private constructor to prevent instantiation
@@ -8,7 +8,8 @@ public class Time extends Type {
     
     public static Time getInstance() { return instance; }
 
-    public char getCode() { return 't'; }
+    public Type.Code getCode() { return Type.Code.TIME; }
+    public char getChar() { return 't'; }
 
     public boolean isFixedWidth() { return true; }
 

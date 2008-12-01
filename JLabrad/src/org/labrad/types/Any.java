@@ -8,7 +8,8 @@ public final class Any extends Type {
     
     public static Any getInstance() { return instance; }
 
-    public char getCode() { return '?'; }
+    public Type.Code getCode() { return Type.Code.ANY; }
+    public char getChar() { return '?'; }
 
     public String toString() { return "?"; }
     public String pretty() { return "any"; }

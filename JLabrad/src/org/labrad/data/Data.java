@@ -6,9 +6,11 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
+import org.labrad.errors.NonIndexableTypeException;
 import org.labrad.types.Type;
 
 /**
@@ -21,10 +23,10 @@ public class Data {
     public static final String STRING_ENCODING = "ISO-8859-1";
     public static final Data EMPTY = new Data("");
 
-    Type type;
-    byte[] data;
-    int ofs;
-    List<byte[]> heap;
+    private Type type;
+    private byte[] data;
+    private int ofs;
+    private List<byte[]> heap;
 
     /**
      * Construct a Data object for a given LabRAD type tag.
@@ -47,12 +49,6 @@ public class Data {
         data = getFilledByteArray(type.dataWidth());
         ofs = 0;
         heap = new ArrayList<byte[]>();
-    }
-
-    private static byte[] getFilledByteArray(int length) {
-    	byte[] data = new byte[length];
-    	Arrays.fill(data, (byte) 0xff);
-    	return data;
     }
     
     /**
@@ -78,6 +74,17 @@ public class Data {
         this.heap = heap;
     }
 
+    /**
+     * Creates a byte array of the specified length filled with 0xff.
+     * @param length of byte array to create
+     * @return array of bytes initialized with 0xff
+     */
+    private static byte[] getFilledByteArray(int length) {
+    	byte[] data = new byte[length];
+    	Arrays.fill(data, (byte) 0xff);
+    	return data;
+    }
+    
     /**
      * Get the LabRAD type of this data object, as a Type object.
      * 
@@ -121,61 +128,55 @@ public class Data {
      */
     private void flatten(ByteArrayOutputStream os, Type type,
     		             byte[] buf, int ofs, List<byte[]> heap) throws IOException {
-        switch (type.getCode()) {
-            case '_': break; // do nothing for empty data
-            case 'b': os.write(buf, ofs, 1); break;
-            case 'i': os.write(buf, ofs, 4); break;
-            case 'w': os.write(buf, ofs, 4); break;
-            case 'v': os.write(buf, ofs, 8); break;
-            case 'c': os.write(buf, ofs, 16); break;
-            case 't': os.write(buf, ofs, 16); break;
-
-            case 's':
-                byte[] sbuf = heap.get(ByteManip.getInt(buf, ofs));
-                ByteManip.writeInt(os, sbuf.length);
-                os.write(sbuf);
-                break;
-
-            case '*':
-                int depth = type.getDepth();
-                Type elementType = type.getSubtype(0);
-                int size = 1;
-                for (int i = 0; i < depth; i++) {
-                    size *= ByteManip.getInt(buf, ofs + 4 * i);
-                }
-                os.write(buf, ofs, 4 * depth);
-                // write data from array
-                byte[] lbuf = heap.get(ByteManip.getInt(buf, ofs + 4 * depth));
-                if (elementType.isFixedWidth()) {
-                	// for fixed-width data, just copy in one big chunk
-                	os.write(lbuf, 0, elementType.dataWidth() * size);
-                } else {
-                	// for variable-width data, flatten recursively
-	                for (int i = 0; i < size; i++) {
-	                    flatten(os, elementType, lbuf, elementType.dataWidth() * i,
-	                            heap);
+        if (type.isFixedWidth()) {
+        	os.write(buf, ofs, type.dataWidth());
+        } else {
+	    	switch (type.getCode()) {
+	            case STR:
+	                byte[] sbuf = heap.get(ByteManip.getInt(buf, ofs));
+	                ByteManip.writeInt(os, sbuf.length);
+	                os.write(sbuf);
+	                break;
+	
+	            case LIST:
+	                int depth = type.getDepth();
+	                Type elementType = type.getSubtype(0);
+	                // compute total number of elements in the list
+	                int size = 1;
+	                for (int i = 0; i < depth; i++) {
+	                    size *= ByteManip.getInt(buf, ofs + 4 * i);
 	                }
-                }
-                break;
-
-            case '(':
-            	if (type.isFixedWidth()) {
-            		os.write(buf, ofs, type.dataWidth());
-            	} else {
-	                for (int i = 0; i < type.size(); i++) {
-	                    flatten(os, type.getSubtype(i), buf,
-	                    		ofs + type.getOffset(i), heap);
+	                // write the list shape
+	                os.write(buf, ofs, 4 * depth);
+	                // write the list data
+	                byte[] lbuf = heap.get(ByteManip.getInt(buf, ofs + 4 * depth));
+	                if (elementType.isFixedWidth()) {
+	                	// for fixed-width data, just copy in one big chunk
+	                	os.write(lbuf, 0, elementType.dataWidth() * size);
+	                } else {
+	                	// for variable-width data, flatten recursively
+		                for (int i = 0; i < size; i++) {
+		                    flatten(os, elementType, lbuf, elementType.dataWidth() * i,
+		                            heap);
+		                }
 	                }
-            	}
-                break;
-
-            case 'E':
-                String tag = "is" + type.getSubtype(0).toString();
-                flatten(os, Type.fromTag(tag), buf, ofs, heap);
-                break;
-
-            default:
-                throw new RuntimeException("Unknown type.");
+	                break;
+	
+	            case CLUSTER:
+	            	for (int i = 0; i < type.size(); i++) {
+		                flatten(os, type.getSubtype(i), buf,
+		                        ofs + type.getOffset(i), heap);
+		            }
+	                break;
+	
+	            case ERROR:
+	                String tag = "is" + type.getSubtype(0).toString();
+	                flatten(os, Type.fromTag(tag), buf, ofs, heap);
+	                break;
+	
+	            default:
+	                throw new RuntimeException("Unknown type.");
+	        }
         }
     }
 
@@ -249,64 +250,56 @@ public class Data {
      */
     private static void unflatten(ByteArrayInputStream is, Type type,
             byte[] buf, int ofs, List<byte[]> heap) throws IOException {
-        switch (type.getCode()) {
-            case '_': break; // do nothing for empty data
-            case 'b': is.read(buf, ofs, 1); break;
-            case 'i': is.read(buf, ofs, 4); break;
-            case 'w': is.read(buf, ofs, 4); break;
-            case 'v': is.read(buf, ofs, 8); break;
-            case 'c': is.read(buf, ofs, 16); break;
-            case 't': is.read(buf, ofs, 16); break;
-
-            case 's':
-                int len = ByteManip.readInt(is);
-                byte[] sbuf = new byte[len];
-                ByteManip.setInt(buf, ofs, heap.size());
-                heap.add(sbuf);
-                is.read(sbuf, 0, len);
-                break;
-
-            case '*':
-                int depth = type.getDepth();
-                Type elementType = type.getSubtype(0);
-                int elementWidth = elementType.dataWidth();
-                is.read(buf, ofs, 4 * depth);
-                int size = 1;
-                for (int i = 0; i < depth; i++) {
-                    size *= ByteManip.getInt(buf, ofs + 4 * i);
-                }
-                byte[] lbuf = new byte[elementWidth * size];
-                ByteManip.setInt(buf, ofs + 4 * depth, heap.size());
-                heap.add(lbuf);
-                if (elementType.isFixedWidth()) {
-                	is.read(lbuf, 0, elementWidth * size);
-                } else {
-	                for (int i = 0; i < size; i++) {
-	                    unflatten(is, type.getSubtype(0), lbuf, elementWidth * i,
-	                            heap);
+    	if (type.isFixedWidth()) {
+    		is.read(buf, ofs, type.dataWidth());
+    	} else {
+	        switch (type.getCode()) {
+	            case STR:
+	                int len = ByteManip.readInt(is);
+	                byte[] sbuf = new byte[len];
+	                ByteManip.setInt(buf, ofs, heap.size());
+	                heap.add(sbuf);
+	                is.read(sbuf, 0, len);
+	                break;
+	
+	            case LIST:
+	                int depth = type.getDepth();
+	                Type elementType = type.getSubtype(0);
+	                int elementWidth = elementType.dataWidth();
+	                is.read(buf, ofs, 4 * depth);
+	                int size = 1;
+	                for (int i = 0; i < depth; i++) {
+	                    size *= ByteManip.getInt(buf, ofs + 4 * i);
 	                }
-                }
-                break;
-
-            case '(':
-            	if (type.isFixedWidth()) {
-            		is.read(buf, ofs, type.dataWidth());
-            	} else {
-	                for (int i = 0; i < type.size(); i++) {
-	                    unflatten(is, type.getSubtype(i), buf, ofs
-	                            + type.getOffset(i), heap);
+	                byte[] lbuf = new byte[elementWidth * size];
+	                ByteManip.setInt(buf, ofs + 4 * depth, heap.size());
+	                heap.add(lbuf);
+	                if (elementType.isFixedWidth()) {
+	                	is.read(lbuf, 0, elementWidth * size);
+	                } else {
+		                for (int i = 0; i < size; i++) {
+		                    unflatten(is, type.getSubtype(0), lbuf, elementWidth * i,
+		                            heap);
+		                }
 	                }
-            	}
-                break;
-
-            case 'E':
-                String tag = "is" + type.getSubtype(0).toString();
-                unflatten(is, Type.fromTag(tag), buf, ofs, heap);
-                break;
-
-            default:
-                throw new RuntimeException("Unknown type.");
-        }
+	                break;
+	
+	            case CLUSTER:
+            	    for (int i = 0; i < type.size(); i++) {
+	                    unflatten(is, type.getSubtype(i), buf,
+	                    		  ofs + type.getOffset(i), heap);
+	                }
+	            	break;
+	
+	            case ERROR:
+	                String tag = "is" + type.getSubtype(0).toString();
+	                unflatten(is, Type.fromTag(tag), buf, ofs, heap);
+	                break;
+	
+	            default:
+	                throw new RuntimeException("Unknown type.");
+	        }
+    	}
     }
 
     public String toString(int... indices) {
@@ -329,62 +322,58 @@ public class Data {
     }
 
     /**
-     * Return a pretty-printed version of this LabRAD data.
+     * Returns a pretty-printed version of this LabRAD data.
      * 
      * @return
      */
     public String pretty() {
         String s = "", u = "";
         switch (type.getCode()) {
-            case '_': return "";
-            case 'b': return Boolean.toString(getBool());
-            case 'i': return Integer.toString(getInt());
-            case 'w': return Long.toString(getWord());
+            case EMPTY: return "";
+            case BOOL: return Boolean.toString(getBool());
+            case INT: return Integer.toString(getInt());
+            case WORD: return Long.toString(getWord());
 
-            case 'v':
-                s = Double.toString(getValue());
-                u = type.getUnits();
-                if (u != null) {
-                    s += " [" + u + "]";
-                }
-                return s;
+            case VALUE:
+            	u = type.getUnits();
+                return Double.toString(getValue()) + (u != null ? " [" + u + "]" : "");
 
-            case 'c':
+            case COMPLEX:
                 Complex c = getComplex();
-                if (c.imag < 0) {
-                    s = Double.toString(c.real) + Double.toString(c.imag) + "i";
-                } else {
-                    s = Double.toString(c.real) + "+" + Double.toString(c.imag) + "i";
-                }
                 u = type.getUnits();
-                if (u != null) {
-                    s += " [" + u + "]";
-                }
-                return s;
+                return Double.toString(c.real) + (c.imag >= 0 ? "+" : "") + 
+                       Double.toString(c.imag) + (u != null ? " [" + u + "]" : "");
 
-            case 't': return getTime().toString();
-            case 's': return "\"" + getString() + "\"";
+            case TIME: return getTime().toString();
+            case STR: return "\"" + getString() + "\"";
 
-            case '*':
+            case LIST:
                 int[] shape = getArrayShape();
                 int[] indices = new int[type.getDepth()];
                 return prettyList(shape, indices, 0);
 
-            case '(':
+            case CLUSTER:
                 for (int i = 0; i < getClusterSize(); i++) {
                     s += ", " + pretty(i);
                 }
                 return "(" + s.substring(2) + ")";
 
-            case 'E':
+            case ERROR:
                 return "Error(" + Integer.toString(getErrorCode()) + ", "
-                        + getErrorMessage() + ")";
+                                + getErrorMessage() + ")";
 
             default:
                 throw new RuntimeException("Unknown type: " + type.pretty() + ".");
         }
     }
 
+    /**
+     * Returns a pretty-printed version of a list object.
+     * @param shape
+     * @param indices
+     * @param level
+     * @return
+     */
     private String prettyList(int[] shape, int[] indices, int level) {
         String s = "";
         for (int i = 0; i < shape[level]; i++) {
@@ -398,42 +387,45 @@ public class Data {
         return "[" + s.substring(2) + "]";
     }
 
+    /**
+     * Indicates whether this data object is empty.
+     * This is a top-level operation only, so there is no indexed version.
+     * @return
+     */
     public boolean isEmpty() {
         return type instanceof org.labrad.types.Empty;
     }
 
+    /**
+     * Indicates whether this data object is an error.
+     * This is a top-level operation only, so there is no indexed version.
+     * @return
+     */
     public boolean isError() {
         return type instanceof org.labrad.types.Error;
     }
     
     /**
-     * getSubtype
-     * 
-     * Extract a subtype from this data object as specified
-     * by the given indices.  Also check that the type at this
-     * location is a subtype of the specified type.
+     * Extracts the subtype from this data object at the specified location.
+     * Also checks that the type at this location is a subtype of the specified type.
      * 
      * @param code
      * @param indices
      * @return
      */
-    private Type getSubtype(char code, int... indices) {
+    private Type getSubtype(Type.Code code, int... indices) {
     	Type type = getSubtype(indices);
     	if (type.getCode() != code) {
-    		String indicesList = "";
-    		for (int i : indices) {
-    			indicesList += ", " + Integer.toString(i);
-    		}
-    		indicesList = "[" + indicesList.substring(2) + "]";
     		throw new RuntimeException(
-    				"Type mismatch: expecting " + code + " at " + indicesList +
+    				"Type mismatch: expecting " + code +
+    				" at " + Arrays.toString(indices) +
     				" but found " + type.getCode() + " instead.");
     	}
     	return type;
     }
     
     /**
-     * getSubtype, but without typechecking
+     * Extracts a subtype without typechecking.
      * @param indices
      * @return
      */
@@ -441,18 +433,23 @@ public class Data {
         Type type = this.type;
         int dimsLeft = 0;
         for (int i : indices) {
-            if (type instanceof org.labrad.types.List) {
-                if (dimsLeft == 0) {
-                    dimsLeft = type.getDepth();
-                }
-                dimsLeft--;
-                if (dimsLeft == 0) {
-                    type = type.getSubtype(i);
-                }
-            } else if (type instanceof org.labrad.types.Cluster) {
-                type = type.getSubtype(i);
-            } else {
-                throw new RuntimeException("Non-indexable type.");
+        	switch (type.getCode()) {
+	        	case LIST:
+	                if (dimsLeft == 0) {
+	                    dimsLeft = type.getDepth();
+	                }
+	                dimsLeft--;
+	                if (dimsLeft == 0) {
+	                    type = type.getSubtype(i);
+	                }
+	                break;
+	                
+	        	case CLUSTER:
+	                type = type.getSubtype(i);
+	                break;
+	                
+	            default:
+	                throw new NonIndexableTypeException(type);
             }
         }
         if (dimsLeft != 0) {
@@ -462,7 +459,7 @@ public class Data {
     }
     
     /**
-     * get a view into the data array at the position specified by indices.
+     * Gets a view into the data array at the position specified by indices.
      * @param indices
      * @return
      */
@@ -474,7 +471,7 @@ public class Data {
         int ofs = this.ofs;
         for (int i : indices) {
             switch (type.getCode()) {
-                case '*':
+                case LIST:
                     if (dimsLeft == 0) {
                         // read list shape
                         depth = type.getDepth();
@@ -496,21 +493,19 @@ public class Data {
                         // calculate offset into array
                         int product = 1;
                         for (int dim = depth - 1; dim >= 0; dim--) {
-                            ofs += type.dataWidth() * listIndices[dim]
-                                    * product;
+                            ofs += type.dataWidth() * listIndices[dim] * product;
                             product *= shape[dim];
                         }
                     }
                     break;
 
-                case '(':
+                case CLUSTER:
                     ofs += type.getOffset(i);
                     type = type.getSubtype(i);
                     break;
 
                 default:
-                    throw new RuntimeException("Non-indexable type: "
-                            + type.getCode() + ".");
+                    throw new NonIndexableTypeException(type);
             }
         }
         if (dimsLeft != 0) {
@@ -537,12 +532,12 @@ public class Data {
     }
 
     public boolean getBool(int... indices) {
-    	getSubtype('b', indices);
+    	getSubtype(Type.Code.BOOL, indices);
         return ByteManip.getBool(getOffset(indices));
     }
 
     public Data setBool(boolean data, int... indices) {
-    	getSubtype('b', indices);
+    	getSubtype(Type.Code.BOOL, indices);
         ByteManip.setBool(getOffset(indices), data);
         return this;
     }
@@ -554,12 +549,12 @@ public class Data {
     }
 
     public int getInt(int... indices) {
-    	getSubtype('i', indices);
+    	getSubtype(Type.Code.INT, indices);
         return ByteManip.getInt(getOffset(indices));
     }
 
     public Data setInt(int data, int... indices) {
-    	getSubtype('i', indices);
+    	getSubtype(Type.Code.INT, indices);
         ByteManip.setInt(getOffset(indices), data);
         return this;
     }
@@ -571,12 +566,12 @@ public class Data {
     }
 
     public long getWord(int... indices) {
-    	getSubtype('w', indices);
+    	getSubtype(Type.Code.WORD, indices);
         return ByteManip.getWord(getOffset(indices));
     }
 
     public Data setWord(long data, int... indices) {
-    	getSubtype('w', indices);
+    	getSubtype(Type.Code.WORD, indices);
         ByteManip.setWord(getOffset(indices), data);
         return this;
     }
@@ -588,18 +583,20 @@ public class Data {
     }
 
     public byte[] getBytes(int... indices) {
-    	getSubtype('s', indices);
+    	getSubtype(Type.Code.STR, indices);
         return heap.get(ByteManip.getInt(getOffset(indices)));
     }
 
     public Data setBytes(byte[] data, int... indices) {
-    	getSubtype('s', indices);
+    	getSubtype(Type.Code.STR, indices);
     	ByteArrayView ofs = getOffset(indices);
     	int heapLocation = ByteManip.getInt(ofs);
     	if (heapLocation == -1) {
+    		// not yet set in the heap
     		ByteManip.setInt(ofs, heap.size());
     		heap.add(data);
     	} else {
+    		// already set in the heap, reuse old spot
     		heap.set(heapLocation, data);
     	}
         return this;
@@ -645,12 +642,12 @@ public class Data {
     }
 
     public double getValue(int... indices) {
-    	getSubtype('v', indices);
+    	getSubtype(Type.Code.VALUE, indices);
         return ByteManip.getDouble(getOffset(indices));
     }
 
     public Data setValue(double data, int... indices) {
-    	getSubtype('v', indices);
+    	getSubtype(Type.Code.VALUE, indices);
         ByteManip.setDouble(getOffset(indices), data);
         return this;
     }
@@ -662,12 +659,12 @@ public class Data {
     }
 
     public Complex getComplex(int... indices) {
-    	getSubtype('c', indices);
+    	getSubtype(Type.Code.COMPLEX, indices);
         return ByteManip.getComplex(getOffset(indices));
     }
 
     public Data setComplex(Complex data, int... indices) {
-    	getSubtype('c', indices);
+    	getSubtype(Type.Code.COMPLEX, indices);
         ByteManip.setComplex(getOffset(indices), data);
         return this;
     }
@@ -691,19 +688,36 @@ public class Data {
 
     
     // time
-    // TODO: correct time translation
+    // TODO check timezones in time translation
+    // LabRAD measures time as seconds and fractions of a second since Jan 1, 1904 GMT.
+    // The Java Date class measures time as milliseconds since Jan 1, 1970 GMT.
+    // The difference between these two is 24107 days.
+    // 
+    private static long deltaSeconds = 24107 * 24 * 60 * 60;
+    
     public boolean isTime(int... indices) {
         return getSubtype(indices) instanceof org.labrad.types.Time;
     }
 
-    public byte[] getTime(int... indices) {
-    	getSubtype('t', indices);
-        return ByteManip.getTime(getOffset(indices));
+    public Date getTime(int... indices) {
+    	getSubtype(Type.Code.TIME, indices);
+    	ByteArrayView ofs = getOffset(indices);
+    	long seconds = ByteManip.getLong(ofs.getBytes(), ofs.getOffset());
+    	long fraction = ByteManip.getLong(ofs.getBytes(), ofs.getOffset() + 8);
+    	seconds -= deltaSeconds;
+    	fraction = (long)(((double) fraction) / Long.MAX_VALUE * 1000);
+        return new Date(seconds * 1000 + fraction);
     }
 
-    public Data setTime(byte[] data, int... indices) {
-    	getSubtype('t', indices);
-        ByteManip.setTime(getOffset(indices), data);
+    public Data setTime(Date date, int... indices) {
+    	getSubtype(Type.Code.TIME, indices);
+    	long millis = date.getTime();
+    	long seconds = millis / 1000 + deltaSeconds;
+    	long fraction = millis % 1000;
+    	fraction = (long)(((double) fraction) / 1000 * Long.MAX_VALUE);
+    	ByteArrayView ofs = getOffset(indices);
+    	ByteManip.setLong(ofs.getBytes(), ofs.getOffset(), seconds);
+    	ByteManip.setLong(ofs.getBytes(), ofs.getOffset(), fraction);
         return this;
     }
 
@@ -714,7 +728,7 @@ public class Data {
     }
 
     public int[] getArrayShape(int... indices) {
-    	Type type = getSubtype('*', indices);
+    	Type type = getSubtype(Type.Code.LIST, indices);
         int depth = type.getDepth();
         int[] shape = new int[depth];
         ByteArrayView pos = getOffset(indices);
@@ -743,7 +757,7 @@ public class Data {
     }
 
     public Data setArrayShape(int[] shape, int... indices) {
-        Type type = getSubtype('*', indices);
+        Type type = getSubtype(Type.Code.LIST, indices);
         Type elementType = type.getSubtype(0);
         int depth = type.getDepth();
         if (shape.length != depth) {
@@ -773,7 +787,7 @@ public class Data {
     }
 
     public int getClusterSize(int... indices) {
-        return getSubtype('(', indices).size();
+        return getSubtype(Type.Code.CLUSTER, indices).size();
     }
 
     
@@ -783,12 +797,12 @@ public class Data {
     }
 
     public int getErrorCode(int... indices) {
-    	getSubtype('E', indices);
+    	getSubtype(Type.Code.ERROR, indices);
         return ByteManip.getInt(getOffset(indices));
     }
 
     public String getErrorMessage(int... indices) {
-    	getSubtype('E', indices);
+    	getSubtype(Type.Code.ERROR, indices);
         ByteArrayView pos = getOffset(indices);
         int index = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4);
         try {
@@ -799,14 +813,14 @@ public class Data {
     }
 
     public Data getErrorPayload(int... indices) {
-        Type type = getSubtype('E', indices);
+        Type type = getSubtype(Type.Code.ERROR, indices);
         ByteArrayView pos = getOffset(indices);
         return new Data(type.getSubtype(0),
         		        pos.getBytes(), pos.getOffset() + 8, heap);
     }
 
     public Data setError(int code, String message, int... indices) {
-    	getSubtype('E', indices);
+    	getSubtype(Type.Code.ERROR, indices);
         ByteArrayView pos = getOffset(indices);
         ByteManip.setInt(pos.getBytes(), pos.getOffset(), code);
         try {
@@ -828,7 +842,7 @@ public class Data {
         byte[] bs = new byte[100];
         Random rand = new Random();
         int count;
-
+        
         boolean b;
         for (count = 0; count < 1000; count++) {
             b = rand.nextBoolean();
@@ -878,7 +892,7 @@ public class Data {
             assert (c1.real == c2.real) && (c1.imag == c2.imag);
         }
         System.out.println("Complex okay.");
-
+        
         Data d1, d2;
         byte[] flat;
 
@@ -890,6 +904,15 @@ public class Data {
         d1.setString("This is a test.");
         System.out.println(d1.getString());
 
+        d1 = new Data("t");
+        for (count = 0; count < 100000; count++) {
+        	Date date1 = new Date(rand.nextLong());
+        	d1.setTime(date1);
+        	Date date2 = d1.getTime();
+        	assert date1.equals(date2);
+        }
+        System.out.println("Date okay.");
+        
         d1 = new Data("*s");
         d1.setArraySize(20);
         for (count = 0; count < 20; count++) {

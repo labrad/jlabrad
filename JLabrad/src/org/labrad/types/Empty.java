@@ -1,6 +1,6 @@
 package org.labrad.types;
 
-public class Empty extends Type {
+public final class Empty extends Type {
     private static Empty instance = new Empty();
 
     // private constructor to prevent instantiation
@@ -8,7 +8,8 @@ public class Empty extends Type {
 
     public static Empty getInstance() { return instance; }
 
-    public char getCode() { return '_'; }
+    public Type.Code getCode() { return Type.Code.EMPTY; }
+    public char getChar() { return '_'; }
 
     public String toString() { return ""; }
     public String pretty() { return "empty"; }
