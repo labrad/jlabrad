@@ -1,7 +1,9 @@
 Client
-- add lookup functionality and caching
 - get rid of SimpleClient altogether (while making Client as easy to use for the simple case)
 - add some message dispatching capabilities
+    - in what thread should messages be handled?  This only works if there is a message dispatcher
+- polish interface, using Delphi API as a reference
+- provide a means to clear the server/setting cache.
 
 Data
 - methods for vectorized array setting
