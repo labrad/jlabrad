@@ -10,8 +10,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -27,9 +32,6 @@ import org.labrad.errors.IncorrectPasswordException;
 import org.labrad.errors.LabradException;
 
 public class Client {
-	private static final long MANAGER = 1;
-	private static final long LOOKUP = 3;
-	private static final long PROTOCOL = 1;
 	private static final String NAME = "Java Client";
 	
 	private Socket socket;
@@ -53,6 +55,16 @@ public class Client {
     private Map<Integer, RequestReceiver> pendingRequests =
     	new HashMap<Integer, RequestReceiver>();
 
+    /** Performs server and method lookups. */
+    private ExecutorService lookupService = Executors.newCachedThreadPool();
+    
+    /** Maps server names to IDs. */
+    private ConcurrentMap<String, Long> serverCache = new ConcurrentHashMap<String, Long>();
+    
+    /** Maps server IDs to a map from setting names to IDs. */
+    private ConcurrentMap<Long, ConcurrentMap<String, Long>> settingCache =
+    	new ConcurrentHashMap<Long, ConcurrentMap<String, Long>>();
+    
     private enum RequestStatus { PENDING, DONE, FAILED, CANCELLED; }
     
     /**
@@ -224,8 +236,6 @@ public class Client {
 	    doLogin(password);
 	}
 
-
-	// Request functions
     
     /**
 	 * Logs in to LabRAD using the standard protocol.
@@ -242,7 +252,7 @@ public class Client {
 		Data data, response;
 	    
 	    // send first ping packet
-	    response = sendRequestAndWait(MANAGER).getRecord(0).getData();
+	    response = sendRequestAndWait(Constants.MANAGER).getRecord(0).getData();
 	    
 	    // get password challenge
 	    MessageDigest md;
@@ -259,7 +269,7 @@ public class Client {
 	    // send password response
 	    data = new Data("s").setBytes(md.digest());
 	    try {
-	    	response = sendRequestAndWait(MANAGER, new Record(0, data)).getRecord(0).getData();
+	    	response = sendRequestAndWait(Constants.MANAGER, new Record(0, data)).getRecord(0).getData();
 	    } catch (ExecutionException e) {
 	    	throw new IncorrectPasswordException();
 	    }
@@ -268,8 +278,8 @@ public class Client {
 	    System.out.println(response.getString());
 	
 	    // send identification packet
-	    data = new Data("ws").setWord(PROTOCOL, 0).setString(NAME, 1);
-	    response = sendRequestAndWait(MANAGER, new Record(0, data)).getRecord(0).getData();
+	    data = new Data("ws").setWord(Constants.PROTOCOL, 0).setString(NAME, 1);
+	    response = sendRequestAndWait(Constants.MANAGER, new Record(0, data)).getRecord(0).getData();
 	    ID = response.getWord();
 	}
 
@@ -304,6 +314,9 @@ public class Client {
 	 */
 	private synchronized void close(Throwable cause) {
 		if (connected) {
+			// shutdown the lookup service
+			lookupService.shutdownNow();
+			
 			// cancel all pending requests
 			for (RequestReceiver receiver : pendingRequests.values()) {
 				receiver.fail(cause);
@@ -337,8 +350,8 @@ public class Client {
 	public void close() {
 		close(new IOException("Connection closed."));
 	}
-
-
+	
+	
 	/**
      * Makes a LabRAD request asynchronously.  The request is sent over LabRAD and an
      * object is returned that can be queried to see if the request has completed or
@@ -346,12 +359,11 @@ public class Client {
      * @param server
      * @param records
      */
-    public synchronized Future<Packet> sendRequest(long server, Record... records)
+    private synchronized Future<Packet> sendRequestNoLookup(long server, Record... records)
     		throws IOException {
     	if (!connected) {
     		throw new IOException("not connected.");
     	}
-        Context context = new Context(0, 1);
         int requestNum;
         if (requestPool.isEmpty()) {
         	requestNum = nextRequest++;
@@ -360,10 +372,223 @@ public class Client {
         }
         RequestReceiver receiver = new RequestReceiver();
         pendingRequests.put(requestNum, receiver);
-        writeQueue.add(new Packet(context, server, requestNum, records));
+        writeQueue.add(new Packet(new Context(0, 1), server, requestNum, records));
         return receiver;
     }
+    
+    
+    /**
+	 * Makes a LabRAD request asynchronously.  The request is sent over LabRAD and an
+	 * object is returned that can be queried to see if the request has completed or
+	 * to wait for completion.
+	 * @param server
+	 * @param records
+	 */
+	public Future<Packet> sendRequest(final long server, final Record... records)
+			throws IOException {
+		boolean needsLookup = needsLookup(server, records);
+		Future<Packet> result;
+		if (needsLookup) {
+			result = lookupService.submit(new Callable<Packet>() {
+				@Override
+				public Packet call() throws Exception {
+					return sendRequestWithLookup(server, records);
+				}
+			});
+		} else {
+			result = sendRequestNoLookup(server, records);
+		}
+		return result;
+	}
 
+
+	/**
+	 * 
+	 * @param server
+	 * @param records
+	 * @return
+	 * @throws IOException
+	 */
+	public Future<Packet> sendRequest(final String server, final Record... records)
+			throws IOException {
+		boolean needsLookup = needsLookup(server, records);
+		Future<Packet> result;
+		if (needsLookup) {
+	    	result = lookupService.submit(new Callable<Packet>() {
+				@Override
+				public Packet call() throws Exception {
+				    return sendRequestWithLookup(server, records);
+				}
+	    	});
+		} else {
+			result = sendRequestNoLookup(serverCache.get(server), records);
+		}
+		return result;
+    }
+    
+    
+    // functions used by the lookup service
+
+	/**
+	 * Checks whether the server and settings IDs can be pulled from cache,
+	 * or need to be looked up.
+	 */
+	private boolean needsLookup(String server, Record[] records) {
+		Long serverID = serverCache.get(server);
+		if (serverID == null) {
+			return true;
+		} else {
+			return needsLookup(serverID, records);
+		}
+	}
+	
+	/**
+	 * Check whether the setting IDs can be pulled from cache,
+	 * or need to be looked up.
+	 */
+	private boolean needsLookup(long server, Record[] records) {
+		boolean needsLookup = false;
+		for (int i = 0; i < records.length; i++) {
+			Record r = records[i];
+			if (r.needsLookup()) {
+				ConcurrentMap<String, Long> cache = settingCache.get(server);
+				if (cache == null) {
+					needsLookup = true;
+				} else {
+					Long ID = cache.get(r.getName());
+					if (ID == null) {
+						needsLookup = true;
+					} else {
+						records[i] = new Record(ID, r.getData());
+					}
+				}
+			}
+		}
+		return needsLookup;
+	}
+	
+	/**
+	 * Sends a request after looking up the server ID.
+	 */
+	private Packet sendRequestWithLookup(String server, Record[] records)
+			throws InterruptedException, ExecutionException, IOException {
+		// lookup server ID
+		long serverID = lookupServer(server);
+		return sendRequestWithLookup(serverID, records);
+	}
+		
+	/**
+	 * Sends a request after looking up setting IDs
+	 * @param server
+	 * @param records
+	 * @return
+	 * @throws IOException
+	 * @throws InterruptedException
+	 * @throws ExecutionException
+	 */
+	private Packet sendRequestWithLookup(long server, Record[] records)
+			throws IOException, InterruptedException, ExecutionException {
+	    List<Integer> indices = new ArrayList<Integer>();
+	    List<String> strings = new ArrayList<String>();
+	    
+		for (int i = 0; i < records.length; i++) {
+			Record r = records[i];
+			if (r.needsLookup()) {
+				indices.add(i);
+				strings.add(r.getName());
+			}
+		}
+		
+		// lookup settings and cache them
+		lookupSettings(server, strings);
+		
+		Record[] newRecs = new Record[records.length];
+		for (int i = 0; i < records.length; i++) {
+			Record r = records[i];
+			if (r.needsLookup()) {
+				long settingID = settingCache.get(server).get(r.getName());
+				newRecs[i] = new Record(settingID, r.getData());
+			} else {
+				newRecs[i] = r;
+			}
+		}
+		
+		return sendRequestAndWait(server, newRecs);
+	}
+	
+    /**
+     * Lookup the ID of a server, pulling from the cache if we already know it.
+     * @param server
+     * @return
+     * @throws IOException
+     * @throws ExecutionException 
+     * @throws InterruptedException 
+     */
+    private long lookupServer(String server)
+    		throws InterruptedException, ExecutionException, IOException {
+    	Long ID = serverCache.get(server);
+    	if (ID == null) {
+	        Data response = sendRequestAndWait(Constants.MANAGER,
+	        		new Record(Constants.LOOKUP, new Data("s").setString(server))).getRecord(0).getData();
+	        ID = response.getWord();
+	        serverCache.putIfAbsent(server, ID);
+	        settingCache.putIfAbsent(ID, new ConcurrentHashMap<String, Long>());
+    	}
+        return ID;
+    }
+    
+    
+    /**
+     * Lookup IDs for a list of settings on the specified server.
+     * @param serverID
+     * @param settings
+     * @return
+     * @throws IOException
+     * @throws ExecutionException 
+     * @throws InterruptedException 
+     */
+    private long[] lookupSettings(long serverID, List<String> settings)
+            throws IOException, InterruptedException, ExecutionException {
+        long[] IDs = new long[settings.size()];
+        int[] indices = new int[settings.size()];
+        String[] lookups = new String[settings.size()];
+        int nLookups = 0;
+
+        ConcurrentMap<String, Long> cache = settingCache.get(serverID);
+        if (cache == null) {
+            cache = settingCache.putIfAbsent(serverID, new ConcurrentHashMap<String, Long>());
+        }
+
+        for (int i = 0; i < settings.size(); i++) {
+            String key = settings.get(i);
+            Long ID = cache.get(key);
+            if (ID != null) {
+                IDs[i] = ID;
+            } else {
+                lookups[nLookups] = key;
+                indices[nLookups] = i;
+                nLookups++;
+            }
+        }
+
+        if (nLookups > 0) {
+	        Data data = new Data("w*s");
+	        data.setWord(serverID, 0);
+	        data.setArraySize(nLookups, 1);
+	        for (int i = 0; i < nLookups; i++) {
+	            data.setString(lookups[i], 1, i);
+	        }
+	        Data response = sendRequestAndWait(Constants.MANAGER, new Record(Constants.LOOKUP, data)).getRecord(0).getData();
+	        for (int i = 0; i < nLookups; i++) {
+	            long ID = response.getWord(1, i);
+	            cache.put(lookups[i], ID);
+	            IDs[indices[i]] = ID;
+	        }
+        }
+        return IDs;
+    }
+    
+    
     
     // Message functions
     
@@ -381,6 +606,11 @@ public class Client {
     		throws InterruptedException, ExecutionException, IOException {
     	return sendRequest(server, records).get();
     }
+    
+    public Packet sendRequestAndWait(String server, Record... records)
+    		throws InterruptedException, ExecutionException, IOException {
+    	return sendRequest(server, records).get();
+	}
     
     /**
      * Sends a LabRAD message to the specified server.
@@ -410,7 +640,6 @@ public class Client {
     		throws IOException, IncorrectPasswordException, ExecutionException, InterruptedException,
     		       NoSuchAlgorithmException {
         Data response, data;
-        long serverID, settingID, debugID, echoID, delayID;
         long start, end;
         
         String server = "Python Test Server";
@@ -421,34 +650,19 @@ public class Client {
         
         // connect to LabRAD
         Client c = new Client("localhost", 7682, password);
-        
-        data = new Data("s*s").setString(server, 0)
-                              .setArraySize(4, 1)
-                                  .setString(setting, 1, 0)
-                                  .setString("debug", 1, 1)
-                                  .setString("Delayed Echo", 1, 2)
-                                  .setString("Echo Delay", 1, 3);
-        data = c.sendRequest(MANAGER, new Record(LOOKUP, data)).get().getRecord(0).getData();
-        serverID = data.getWord(0);
-        settingID = data.getWord(1, 0);
-        debugID = data.getWord(1, 1);
-        echoID = data.getWord(1, 2);
-        delayID = data.getWord(1, 3);
-        
-        System.out.println("Server '" + server + "' has ID: " + serverID);
-        System.out.println("Setting '" + setting + "' has ID: " + settingID);
-        
+                
         // lookup hydrant server
         //ServerProxy hydrant = c.getServer(server);
         
+        // set delay to 1 second
+        c.sendRequestAndWait(server, new Record("Echo Delay", new Data("v[s]").setValue(1.0)));
+        
         // echo with delays
         System.out.println("echo with delays...");
-        // set delay to 1 second
-        c.sendRequestAndWait(serverID, new Record(delayID, new Data("v[s]").setValue(1.0)));
         requests.clear();
         start = System.currentTimeMillis();
         for (int i = 0; i < 5; i++) {
-        	requests.add(c.sendRequest(serverID, new Record(echoID, new Data("w").setWord(4))));
+        	requests.add(c.sendRequest(server, new Record("Delayed Echo", new Data("w").setWord(4))));
         }
         for (Future<Packet> request : requests) {
         	request.get();
@@ -462,7 +676,7 @@ public class Client {
         requests.clear();
         start = System.currentTimeMillis();
         for (int i = 0; i < 1000; i++) {
-        	requests.add(c.sendRequest(serverID, new Record(settingID)));
+        	requests.add(c.sendRequest(server, new Record(setting)));
         }
         for (Future<Packet> request : requests) {
             response = request.get().getRecord(0).getData();
@@ -476,7 +690,7 @@ public class Client {
         requests.clear();
         start = System.currentTimeMillis();
         for (int i = 0; i < 1000; i++) {
-            requests.add(c.sendRequest(serverID, new Record(settingID)));
+            requests.add(c.sendRequest(server, new Record(setting)));
         }
         for (Future<Packet> request : requests) {
         	request.get().getRecord(0).getData().pretty();
@@ -489,7 +703,7 @@ public class Client {
         requests.clear();
         start = System.currentTimeMillis();
         for (int i = 0; i < 1000; i++) {
-        	requests.add(c.sendRequest(serverID, new Record(settingID)));
+        	requests.add(c.sendRequest(server, new Record(setting)));
         }
         for (Future<Packet> request : requests) {
         	request.get();
@@ -499,7 +713,7 @@ public class Client {
 
         // debug
         start = System.currentTimeMillis();
-        response = c.sendRequestAndWait(serverID, new Record(debugID)).getRecord(0).getData();
+        response = c.sendRequestAndWait(server, new Record("debug")).getRecord(0).getData();
         System.out.println("Debug output: " + response.pretty());
         end = System.currentTimeMillis();
         System.out.println("done.  elapsed: " + (end - start) + " ms.");
@@ -509,7 +723,7 @@ public class Client {
         requests.clear();
         start = System.currentTimeMillis();
         for (int i = 0; i < 10000; i++) {
-        	requests.add(c.sendRequest(MANAGER));
+        	requests.add(c.sendRequest("Manager"));
         }
         for (Future<Packet> request : requests) {
         	request.get();
