@@ -1,7 +1,8 @@
 package org.labrad;
 
 import java.io.IOException;
-import java.util.Vector;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.labrad.data.Data;
 import org.labrad.data.Record;
@@ -9,23 +10,19 @@ import org.labrad.data.Record;
 public class PacketBuilder {
 	private SimpleClient sc;
 	private ServerProxy server;
-	private Vector<Record> records;
+	private List<Record> records;
 	
 	public PacketBuilder(SimpleClient sc, ServerProxy server) {
 		this.sc = sc;
 		this.server = server;
-		records = new Vector<Record>();
+		records = new ArrayList<Record>();
 	}
 	
-	public Data[] send() throws IOException {
-		Record[] request = new Record[records.size()];
-		for (int i = 0; i < records.size(); i++) {
-			request[i] = records.get(i);
-		}
-		Record[] response = sc.sendRequest(server.getID(), request);
-		Data[] answer = new Data[response.length];
-		for (int i = 0; i < response.length; i++) {
-			answer[i] = response[i].getData();
+	public List<Data> send() throws IOException {
+		List<Record> response = sc.sendRequest(server.getID(), records.toArray(new Record[0]));
+		List<Data> answer = new ArrayList<Data>();
+		for (Record r : response) {
+			answer.add(r.getData());
 		}
 		return answer;
 	}

@@ -11,33 +11,8 @@ import org.labrad.types.Type;
 
 public class PacketInputStream extends FilterInputStream {
 
-    // used for generic method call to convert List<Record> into Record[]
-    private static final Record[] RECORD_ARRAY = {};
-    
     public PacketInputStream(InputStream in) {
         super(in);
-    }
-
-    /**
-     * Converts a byte array into a hex string.
-     * @param bytes
-     * @return
-     */
-    public String dumpBytes(byte[] bytes) {
-        int counter = 0;
-        String dump = "";
-        for (byte b : bytes) {
-            int high = (b & 0xF0) >> 4;
-            int low = (b & 0x0F);
-            dump += "0123456789ABCDEF".substring(high, high + 1)
-                    + "0123456789ABCDEF".substring(low, low + 1);
-            counter++;
-            if (counter == 4) {
-                dump += " ";
-                counter = 0;
-            }
-        }
-        return dump;
     }
 
     /**
@@ -67,8 +42,7 @@ public class PacketInputStream extends FilterInputStream {
             byte[] data = recdata.getBytes(2);
             records.add(new Record(ID, Data.unflatten(data, tag)));
         }
-        return new Packet(new Context(ctxHigh, ctxLow), source, request,
-                          records.toArray(RECORD_ARRAY));
+        return new Packet(new Context(ctxHigh, ctxLow), source, request, records);
     }
     
     /**
@@ -79,10 +53,10 @@ public class PacketInputStream extends FilterInputStream {
      */
     private byte[] readBytes(int n) throws IOException {
         byte[] data = new byte[n];
-        int bytesRead, totalRead = 0;
+        int totalRead = 0;
 
         while (totalRead < n) {
-            bytesRead = in.read(data, totalRead, n - totalRead);
+            int bytesRead = in.read(data, totalRead, n - totalRead);
             if (bytesRead < 0) {
                 throw new IOException("Socket closed.");
             }

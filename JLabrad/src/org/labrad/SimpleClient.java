@@ -5,6 +5,7 @@ import java.net.Socket;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.labrad.data.Context;
@@ -107,14 +108,14 @@ public class SimpleClient {
             os = new PacketOutputStream(socket.getOutputStream());
 
             Data data;
-            Record[] response;
+            List<Record> response;
             connected = true;
 
             // send first (empty) packet
             response = sendRequest();
 
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] challenge = response[0].getData().getBytes();
+            byte[] challenge = response.get(0).getData().getBytes();
             md.update(challenge);
             md.update(password.getBytes(ENCODING));
 
@@ -127,12 +128,12 @@ public class SimpleClient {
             }
             
             // print welcome message
-            System.out.println(response[0].getData().getString());
+            System.out.println(response.get(0).getData().getString());
 
             // send identification packet
             data = new Data("ws").setWord(PROTOCOL, 0).setString(NAME, 1);
             response = sendRequest(new Record(0, data));
-            ID = response[0].getData().getWord();
+            ID = response.get(0).getData().getWord();
 
             // if we get here, connection was successful
             this.host = host;
@@ -165,7 +166,7 @@ public class SimpleClient {
             return serverCache.get(server);
         }
         Data response = sendRequest(
-        		new Record(LOOKUP, new Data("s").setString(server)))[0].getData();
+        		new Record(LOOKUP, new Data("s").setString(server))).get(0).getData();
         if (response.isError()) {
         	throw new LabradException(response);
         }
@@ -216,7 +217,7 @@ public class SimpleClient {
 	        for (int i = 0; i < nLookups; i++) {
 	            data.setString(lookups[i], 1, i);
 	        }
-	        Data response = sendRequest(new Record(LOOKUP, data))[0].getData();
+	        Data response = sendRequest(new Record(LOOKUP, data)).get(0).getData();
 	        if (response.isError()) {
 	        	throw new LabradException(response);
 	        }
@@ -238,26 +239,26 @@ public class SimpleClient {
     	return new Context(0, nextContext++);
     }
     
-    public Record[] sendRequest(Record... records) throws IOException {
+    public List<Record> sendRequest(Record... records) throws IOException {
         return sendRequest(defaultCtx, MANAGER, records);
     }
 
-    public Record[] sendRequest(String target, Record... records)
+    public List<Record> sendRequest(String target, Record... records)
             throws IOException {
         return sendRequest(lookupServer(target), records);
     }
 
-    public Record[] sendRequest(long target, Record... records)
+    public List<Record> sendRequest(long target, Record... records)
     		throws IOException {
         return sendRequest(defaultCtx, target, records);
     }
 
-    public Record[] sendRequest(Context context, String target, Record... records)
+    public List<Record> sendRequest(Context context, String target, Record... records)
             throws IOException {
         return sendRequest(context, lookupServer(target), records);
     }
 
-    public Record[] sendRequest(Context context, long target, Record... records)
+    public List<Record> sendRequest(Context context, long target, Record... records)
             throws IOException {
         ensureConnection();
 
@@ -283,7 +284,7 @@ public class SimpleClient {
             }
         }
 
-        os.writePacket(context, target, 1, lookedUpRecords);
+        os.writePacket(new Packet(context, target, 1, lookedUpRecords));
         Packet packet = is.readPacket();
         return packet.getRecords();
     }

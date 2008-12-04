@@ -24,22 +24,10 @@ public class PacketOutputStream extends BufferedOutputStream {
      * @throws IOException
      */
     public void writePacket(Packet packet) throws IOException {
-        writePacket(packet.getContext(), packet.getTarget(),
-        		    packet.getRequest(), packet.getRecords());
-    }
-
-    public void writePacket(Context context, long target, int request,
-    		Record... records) throws IOException {
-    	writePacket(context.getHigh(), context.getLow(), target, request, records);
-    }
-    
-    public void writePacket(long high, long low, long target, int request,
-            Record... records) throws IOException {
-
         ByteArrayOutputStream os = new ByteArrayOutputStream();
 
         // flatten records
-        for (Record rec : records) {
+        for (Record rec : packet.getRecords()) {
             Data recData = new Data(Type.RECORD_TYPE);
             recData.setWord(rec.getID(), 0);
             recData.setString(rec.getData().getTag(), 1);
@@ -49,10 +37,10 @@ public class PacketOutputStream extends BufferedOutputStream {
 
         // flatten packet header and append records
         Data packetData = new Data(Type.PACKET_TYPE);
-        packetData.setWord(high, 0);
-        packetData.setWord(low, 1);
-        packetData.setInt(request, 2);
-        packetData.setWord(target, 3);
+        packetData.setWord(packet.getContext().getHigh(), 0);
+        packetData.setWord(packet.getContext().getLow(), 1);
+        packetData.setInt(packet.getRequest(), 2);
+        packetData.setWord(packet.getTarget(), 3);
         packetData.setBytes(os.toByteArray(), 4);
 
         out.write(packetData.flatten());

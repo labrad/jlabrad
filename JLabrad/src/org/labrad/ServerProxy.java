@@ -19,11 +19,11 @@ public class ServerProxy {
     }
 
     public Data sendRequest(String setting) throws IOException {
-        return sc.sendRequest(ID, new Record(setting))[0].getData();
+        return sc.sendRequest(ID, new Record(setting)).get(0).getData();
     }
 
     public Data sendRequest(String setting, Data data) throws IOException {
-        return sc.sendRequest(ID, new Record(setting, data))[0].getData();
+        return sc.sendRequest(ID, new Record(setting, data)).get(0).getData();
     }
     
     public PacketBuilder newPacket() {
