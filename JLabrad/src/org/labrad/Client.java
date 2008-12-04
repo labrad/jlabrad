@@ -287,25 +287,19 @@ public class Client {
 	/**
 	 * @return the host
 	 */
-	public String getHost() {
-		return host;
-	}
+	public String getHost() { return host; }
 
 
 	/**
 	 * @return the port
 	 */
-	public int getPort() {
-		return port;
-	}
+	public int getPort() { return port; }
 
 
 	/**
 	 * @return the iD
 	 */
-	public long getID() {
-		return ID;
-	}
+	public long getID() { return ID; }
 
 
 	/**
