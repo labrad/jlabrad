@@ -70,9 +70,9 @@ public class Client {
     /**
      * Represents a pending LabRAD request.
      */
-    private class RequestReceiver implements Future<Packet> {
+    private class RequestReceiver implements Future<List<Data>> {
     	private RequestStatus status = RequestStatus.PENDING;
-    	private Packet response;
+    	private List<Data> response;
     	private Throwable cause;
     	
     	/**
@@ -93,7 +93,7 @@ public class Client {
 		}
 
 		@Override
-		public synchronized Packet get() throws InterruptedException, ExecutionException {
+		public synchronized List<Data> get() throws InterruptedException, ExecutionException {
 			while (!isDone()) {
 				wait();
 			}
@@ -106,7 +106,7 @@ public class Client {
 		}
 
 		@Override
-		public synchronized Packet get(long duration, TimeUnit timeUnit)
+		public synchronized List<Data> get(long duration, TimeUnit timeUnit)
 				throws InterruptedException, ExecutionException,
 				TimeoutException {
 			while (!isDone()) {
@@ -130,15 +130,18 @@ public class Client {
 			return status != RequestStatus.PENDING;
 		}
 		
-		protected synchronized void set(Packet response) {
+		protected synchronized void set(Packet packet) {
 			if (!isCancelled()) {
 				boolean failed = false;
-				for (Record rec : response.getRecords()) {
+				List<Data> response = new ArrayList<Data>();
+				for (Record rec : packet.getRecords()) {
 					Data data = rec.getData();
 					if (data.isError()) {
 						failed = true;
 						this.cause = new LabradException(data);
 						break;
+					} else {
+						response.add(data);
 					}
 				}
 				this.response = response;
@@ -252,7 +255,7 @@ public class Client {
 		Data data, response;
 	    
 	    // send first ping packet
-	    response = sendRequestAndWait(Constants.MANAGER).getRecord(0).getData();
+	    response = sendRequestAndWait(Constants.MANAGER).get(0);
 	    
 	    // get password challenge
 	    MessageDigest md;
@@ -269,7 +272,7 @@ public class Client {
 	    // send password response
 	    data = new Data("s").setBytes(md.digest());
 	    try {
-	    	response = sendRequestAndWait(Constants.MANAGER, new Record(0, data)).getRecord(0).getData();
+	    	response = sendRequestAndWait(Constants.MANAGER, new Record(0, data)).get(0);
 	    } catch (ExecutionException e) {
 	    	throw new IncorrectPasswordException();
 	    }
@@ -279,7 +282,7 @@ public class Client {
 	
 	    // send identification packet
 	    data = new Data("ws").setWord(Constants.PROTOCOL, 0).setString(NAME, 1);
-	    response = sendRequestAndWait(Constants.MANAGER, new Record(0, data)).getRecord(0).getData();
+	    response = sendRequestAndWait(Constants.MANAGER, new Record(0, data)).get(0);
 	    ID = response.getWord();
 	}
 
@@ -353,7 +356,7 @@ public class Client {
      * @param server
      * @param records
      */
-    private synchronized Future<Packet> sendRequestNoLookup(long server, Record... records)
+    private synchronized Future<List<Data>> sendRequestNoLookup(long server, Record... records)
     		throws IOException {
     	if (!connected) {
     		throw new IOException("not connected.");
@@ -378,14 +381,14 @@ public class Client {
 	 * @param server
 	 * @param records
 	 */
-	public Future<Packet> sendRequest(final long server, final Record... records)
+	public Future<List<Data>> sendRequest(final long server, final Record... records)
 			throws IOException {
 		boolean needsLookup = needsLookup(server, records);
-		Future<Packet> result;
+		Future<List<Data>> result;
 		if (needsLookup) {
-			result = lookupService.submit(new Callable<Packet>() {
+			result = lookupService.submit(new Callable<List<Data>>() {
 				@Override
-				public Packet call() throws Exception {
+				public List<Data> call() throws Exception {
 					return sendRequestWithLookup(server, records);
 				}
 			});
@@ -403,38 +406,29 @@ public class Client {
 	 * @return
 	 * @throws IOException
 	 */
-	public Future<Packet> sendRequest(final String server, final Record... records)
+	public Future<List<Data>> sendRequest(final String server, final Record... records)
 			throws IOException {
-		boolean needsLookup = needsLookup(server, records);
-		Future<Packet> result;
+		boolean needsLookup = true;
+		final Long serverID = serverCache.get(server);
+		if (serverID != null) {
+			needsLookup = needsLookup(serverID, records);
+		}
 		if (needsLookup) {
-	    	result = lookupService.submit(new Callable<Packet>() {
+	    	return lookupService.submit(new Callable<List<Data>>() {
 				@Override
-				public Packet call() throws Exception {
-				    return sendRequestWithLookup(server, records);
+				public List<Data> call() throws Exception {
+					// lookup server ID
+					long realServerID = (serverID != null) ? serverID : lookupServer(server);
+					return sendRequestWithLookup(realServerID, records);
 				}
 	    	});
 		} else {
-			result = sendRequestNoLookup(serverCache.get(server), records);
+			return sendRequestNoLookup(serverCache.get(server), records);
 		}
-		return result;
     }
     
     
     // functions used by the lookup service
-
-	/**
-	 * Checks whether the server and settings IDs can be pulled from cache,
-	 * or need to be looked up.
-	 */
-	private boolean needsLookup(String server, Record[] records) {
-		Long serverID = serverCache.get(server);
-		if (serverID == null) {
-			return true;
-		} else {
-			return needsLookup(serverID, records);
-		}
-	}
 	
 	/**
 	 * Check whether the setting IDs can be pulled from cache,
@@ -460,16 +454,6 @@ public class Client {
 		}
 		return needsLookup;
 	}
-	
-	/**
-	 * Sends a request after looking up the server ID.
-	 */
-	private Packet sendRequestWithLookup(String server, Record[] records)
-			throws InterruptedException, ExecutionException, IOException {
-		// lookup server ID
-		long serverID = lookupServer(server);
-		return sendRequestWithLookup(serverID, records);
-	}
 		
 	/**
 	 * Sends a request after looking up setting IDs
@@ -480,7 +464,7 @@ public class Client {
 	 * @throws InterruptedException
 	 * @throws ExecutionException
 	 */
-	private Packet sendRequestWithLookup(long server, Record[] records)
+	private List<Data> sendRequestWithLookup(long server, Record[] records)
 			throws IOException, InterruptedException, ExecutionException {
 	    List<Integer> indices = new ArrayList<Integer>();
 	    List<String> strings = new ArrayList<String>();
@@ -523,7 +507,7 @@ public class Client {
     	Long ID = serverCache.get(server);
     	if (ID == null) {
 	        Data response = sendRequestAndWait(Constants.MANAGER,
-	        		new Record(Constants.LOOKUP, new Data("s").setString(server))).getRecord(0).getData();
+	        		new Record(Constants.LOOKUP, new Data("s").setString(server))).get(0);
 	        ID = response.getWord();
 	        serverCache.putIfAbsent(server, ID);
 	        settingCache.putIfAbsent(ID, new ConcurrentHashMap<String, Long>());
@@ -572,7 +556,7 @@ public class Client {
 	        for (int i = 0; i < nLookups; i++) {
 	            data.setString(lookups[i], 1, i);
 	        }
-	        Data response = sendRequestAndWait(Constants.MANAGER, new Record(Constants.LOOKUP, data)).getRecord(0).getData();
+	        Data response = sendRequestAndWait(Constants.MANAGER, new Record(Constants.LOOKUP, data)).get(0);
 	        for (int i = 0; i < nLookups; i++) {
 	            long ID = response.getWord(1, i);
 	            cache.put(lookups[i], ID);
@@ -596,12 +580,12 @@ public class Client {
      * @throws ExecutionException
      * @throws IOException 
      */
-    public Packet sendRequestAndWait(long server, Record... records)
+    public List<Data> sendRequestAndWait(long server, Record... records)
     		throws InterruptedException, ExecutionException, IOException {
     	return sendRequest(server, records).get();
     }
     
-    public Packet sendRequestAndWait(String server, Record... records)
+    public List<Data> sendRequestAndWait(String server, Record... records)
     		throws InterruptedException, ExecutionException, IOException {
     	return sendRequest(server, records).get();
 	}
@@ -640,7 +624,7 @@ public class Client {
         String setting = "Get Random Data";
         String password = "martinisgroup";
         
-        List<Future<Packet>> requests = new ArrayList<Future<Packet>>();
+        List<Future<List<Data>>> requests = new ArrayList<Future<List<Data>>>();
         
         // connect to LabRAD
         Client c = new Client("localhost", 7682, password);
@@ -658,7 +642,7 @@ public class Client {
         for (int i = 0; i < 5; i++) {
         	requests.add(c.sendRequest(server, new Record("Delayed Echo", new Data("w").setWord(4))));
         }
-        for (Future<Packet> request : requests) {
+        for (Future<List<Data>> request : requests) {
         	request.get();
         	System.out.println("Got one!");
         }
@@ -672,8 +656,8 @@ public class Client {
         for (int i = 0; i < 1000; i++) {
         	requests.add(c.sendRequest(server, new Record(setting)));
         }
-        for (Future<Packet> request : requests) {
-            response = request.get().getRecord(0).getData();
+        for (Future<List<Data>> request : requests) {
+            response = request.get().get(0);
             System.out.println("got packet: " + response.pretty());
         }
         end = System.currentTimeMillis();
@@ -686,8 +670,8 @@ public class Client {
         for (int i = 0; i < 1000; i++) {
             requests.add(c.sendRequest(server, new Record(setting)));
         }
-        for (Future<Packet> request : requests) {
-        	request.get().getRecord(0).getData().pretty();
+        for (Future<List<Data>> request : requests) {
+        	request.get().get(0).pretty();
         }
         end = System.currentTimeMillis();
         System.out.println("done.  elapsed: " + (end - start) + " ms.");
@@ -699,7 +683,7 @@ public class Client {
         for (int i = 0; i < 1000; i++) {
         	requests.add(c.sendRequest(server, new Record(setting)));
         }
-        for (Future<Packet> request : requests) {
+        for (Future<List<Data>> request : requests) {
         	request.get();
         }
         end = System.currentTimeMillis();
@@ -707,7 +691,7 @@ public class Client {
 
         // debug
         start = System.currentTimeMillis();
-        response = c.sendRequestAndWait(server, new Record("debug")).getRecord(0).getData();
+        response = c.sendRequestAndWait(server, new Record("debug")).get(0);
         System.out.println("Debug output: " + response.pretty());
         end = System.currentTimeMillis();
         System.out.println("done.  elapsed: " + (end - start) + " ms.");
@@ -719,7 +703,7 @@ public class Client {
         for (int i = 0; i < 10000; i++) {
         	requests.add(c.sendRequest("Manager"));
         }
-        for (Future<Packet> request : requests) {
+        for (Future<List<Data>> request : requests) {
         	request.get();
         }
         end = System.currentTimeMillis();

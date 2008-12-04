@@ -5,16 +5,11 @@ import java.util.List;
 
 
 public class Packet {
-    private Context context;
-    private long target;
-    private String targetString;
-    private int request;
-    List<Record> records;
-
-    public Packet() {
-    	
-    }
-    
+    private final Context context;
+    private final long target;
+    private final int request;
+    private final List<Record> records;
+        
     public Packet(Context context, long target, int request, Record... records) {
     	this(context, target, request, Arrays.asList(records));
     }
@@ -26,13 +21,6 @@ public class Packet {
         this.records = records;
     }
     
-    public String toString() {
-        return "Packet(" + "context=" + context.toString()
-                         + ", target=" + Long.toString(target)
-                         + ", request=" + Integer.toString(request)
-                         + ", records=" + records.toString() + ")";
-    }
-
     public int size() { return records.size(); }
     public List<Record> getRecords() { return records; }
     public Record getRecord(int index) { return records.get(index); }
