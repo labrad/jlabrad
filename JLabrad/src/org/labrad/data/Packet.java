@@ -27,4 +27,12 @@ public class Packet {
 	public Context getContext() { return context; }
 	public long getTarget() { return target; }
 	public int getRequest() { return request; }
+	
+	public static Packet forRequest(Request request, int requestNum) {
+		return new Packet(request.getContext(), request.getServerID(), requestNum, request.getRecords());
+	}
+	
+	public static Packet forMessage(Request request) {
+		return Packet.forRequest(request, 0);
+	}
 }

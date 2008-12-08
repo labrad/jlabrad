@@ -97,7 +97,7 @@ public abstract class Type {
 
         public String toString() { return s; }
     }
-
+    
     /**
      * Get a type object from a tag string.
      * @param tag

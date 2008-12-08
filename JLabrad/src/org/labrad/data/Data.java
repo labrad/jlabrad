@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Random;
 
 import org.labrad.errors.NonIndexableTypeException;
+import org.labrad.types.Cluster;
 import org.labrad.types.Type;
 
 /**
@@ -22,12 +23,36 @@ import org.labrad.types.Type;
 public class Data {
     public static final String STRING_ENCODING = "ISO-8859-1";
     public static final Data EMPTY = new Data("");
+    
+    // time
+    // TODO check timezones in time translation
+    // LabRAD measures time as seconds and fractions of a second since Jan 1, 1904 GMT.
+    // The Java Date class measures time as milliseconds since Jan 1, 1970 GMT.
+    // The difference between these two is 24107 days.
+    // 
+    private static long deltaSeconds = 24107 * 24 * 60 * 60;
 
     private Type type;
     private byte[] data;
     private int ofs;
     private List<byte[]> heap;
 
+    public static Data of(Data... elements) {
+    	return Data.of(Arrays.asList(elements));
+    }
+    
+    public static Data of(List<Data> elements) {
+    	List<Type> elementTypes = new ArrayList<Type>();
+    	for (Data elem : elements) {
+    		elementTypes.add(elem.getType());
+    	}
+    	Data cluster = new Data(Cluster.of(elementTypes));
+    	for (int i = 0; i < elementTypes.size(); i++) {
+    		cluster.get(i).set(elements.get(i));
+    	}
+    	return cluster;
+    }
+    
     /**
      * Construct a Data object for a given LabRAD type tag.
      * 
@@ -303,7 +328,7 @@ public class Data {
     }
 
     public String toString(int... indices) {
-    	return getData(indices).toString();
+    	return get(indices).toString();
     }
     
     public String toString() {
@@ -318,7 +343,7 @@ public class Data {
      * @return
      */
     public String pretty(int... indices) {
-        return getData(indices).pretty();
+        return get(indices).pretty();
     }
 
     /**
@@ -386,24 +411,6 @@ public class Data {
         }
         return "[" + s.substring(2) + "]";
     }
-
-    /**
-     * Indicates whether this data object is empty.
-     * This is a top-level operation only, so there is no indexed version.
-     * @return
-     */
-    public boolean isEmpty() {
-        return type instanceof org.labrad.types.Empty;
-    }
-
-    /**
-     * Indicates whether this data object is an error.
-     * This is a top-level operation only, so there is no indexed version.
-     * @return
-     */
-    public boolean isError() {
-        return type instanceof org.labrad.types.Error;
-    }
     
     /**
      * Extracts the subtype from this data object at the specified location.
@@ -422,6 +429,14 @@ public class Data {
     				" but found " + type.getCode() + " instead.");
     	}
     	return type;
+    }
+    
+    private void getSubtype(Type.Code code) {
+    	if (type.getCode() != code) {
+    		throw new RuntimeException(
+    				"Type mismatch: expecting " + code +
+    				" but found " + type.getCode() + " instead.");
+    	}
     }
     
     /**
@@ -514,330 +529,486 @@ public class Data {
         return new ByteArrayView(data, ofs);
     }
 
+    public Data get(List<Integer> indices) {
+    	int[] indexArray = new int[indices.size()];
+    	for (int i = 0; i < indices.size(); i++) {
+    		indexArray[i] = indices.get(i);
+    	}
+    	return get(indexArray);
+    }
+    
     /**
      * Get a Data view into a subobject given by indices.
      * @param indices
      * @return
      */
-    public Data getData(int... indices) {
+    public Data get(int... indices) {
         Type type = getSubtype(indices);
         ByteArrayView pos = getOffset(indices);
         return new Data(type, pos.getBytes(), pos.getOffset(), heap);
     }
 
+    public Data set(Data data) {
+    	// TODO: implement this!
+    	throw new RuntimeException("Not implemented!");
+    }
     
-    // boolean
-    public boolean isBool(int... indices) {
-        return getSubtype(indices) instanceof org.labrad.types.Bool;
+    // type checks
+    public boolean isBool() { return type instanceof org.labrad.types.Bool; }
+	public boolean isInt() { return type instanceof org.labrad.types.Int; }
+	public boolean isWord() { return type instanceof org.labrad.types.Word; }
+	public boolean isBytes() { return type instanceof org.labrad.types.Str; }
+	public boolean isString() { return type instanceof org.labrad.types.Str; }
+	public boolean isValue() { return type instanceof org.labrad.types.Value; }
+	public boolean isComplex() { return type instanceof org.labrad.types.Complex; }
+	public boolean isTime() { return type instanceof org.labrad.types.Time; }
+	public boolean isArray() { return type instanceof org.labrad.types.List; }
+	public boolean isCluster() { return type instanceof org.labrad.types.Cluster; }
+	public boolean isEmpty() { return type instanceof org.labrad.types.Empty; }
+    public boolean isError() { return type instanceof org.labrad.types.Error; }
+    public boolean hasUnits() {
+    	return ((type instanceof org.labrad.types.Value) ||
+	    		(type instanceof org.labrad.types.Complex))
+		           && (type.getUnits() != null);
     }
-
-    public boolean getBool(int... indices) {
-    	getSubtype(Type.Code.BOOL, indices);
-        return ByteManip.getBool(getOffset(indices));
+	
+	// indexed type checks
+	public boolean isBool(int... indices) { return get(indices).isBool(); }
+    public boolean isInt(int... indices) { return get(indices).isInt(); }
+	public boolean isWord(int... indices) { return get(indices).isWord(); }
+	public boolean isBytes(int... indices) { return get(indices).isBool(); }
+	public boolean isString(int... indices) { return get(indices).isString(); }
+	public boolean isValue(int... indices) { return get(indices).isValue(); }
+	public boolean isComplex(int... indices) { return get(indices).isComplex(); }
+	public boolean isTime(int... indices) { return get(indices).isTime(); }
+	public boolean isArray(int... indices) { return get(indices).isArray(); }
+	public boolean isCluster(int... indices) { return get(indices).isCluster(); }
+	public boolean hasUnits(int... indices) { return get(indices).hasUnits(); }
+	
+	// getters
+	public boolean getBool() {
+    	getSubtype(Type.Code.BOOL);
+    	return ByteManip.getBool(getOffset());
     }
+    
+    public int getInt() {
+		getSubtype(Type.Code.INT);
+	    return ByteManip.getInt(getOffset());
+	}
 
-    public Data setBool(boolean data, int... indices) {
-    	getSubtype(Type.Code.BOOL, indices);
-        ByteManip.setBool(getOffset(indices), data);
+	public long getWord() {
+		getSubtype(Type.Code.WORD);
+	    return ByteManip.getWord(getOffset());
+	}
+
+	public byte[] getBytes() {
+		getSubtype(Type.Code.STR);
+	    return heap.get(ByteManip.getInt(getOffset()));
+	}
+
+	public String getString() {
+	    try {
+	        return new String(getBytes(), STRING_ENCODING);
+	    } catch (UnsupportedEncodingException e) {
+	        throw new RuntimeException("Unsupported string encoding.");
+	    }
+	}
+
+	public String getString(String encoding) throws UnsupportedEncodingException {
+		return new String(getBytes(), encoding);
+	}
+	
+	public double getValue() {
+		getSubtype(Type.Code.VALUE);
+	    return ByteManip.getDouble(getOffset());
+	}
+	
+	public Complex getComplex() {
+		getSubtype(Type.Code.COMPLEX);
+	    return ByteManip.getComplex(getOffset());
+	}
+
+	public String getUnits() {
+		return type.getUnits();
+	}
+	
+	public Date getTime() {
+		getSubtype(Type.Code.TIME);
+		ByteArrayView ofs = getOffset();
+		long seconds = ByteManip.getLong(ofs.getBytes(), ofs.getOffset());
+		long fraction = ByteManip.getLong(ofs.getBytes(), ofs.getOffset() + 8);
+		seconds -= deltaSeconds;
+		fraction = (long)(((double) fraction) / Long.MAX_VALUE * 1000);
+	    return new Date(seconds * 1000 + fraction);
+	}
+	
+	public int getArraySize() {
+		int[] shape = getArrayShape();
+		if (shape.length > 1) {
+			throw new RuntimeException("Can't get size of multi-dimensional array.  Use getArrayShape.");
+		}
+	    return shape[0];
+	}
+
+	public int[] getArrayShape() {
+		getSubtype(Type.Code.LIST);
+	    int depth = type.getDepth();
+	    int[] shape = new int[depth];
+	    ByteArrayView pos = getOffset();
+	    for (int i = 0; i < depth; i++) {
+	        shape[i] = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4*i);
+	    }
+	    return shape;
+	}
+
+	public int getClusterSize() {
+		getSubtype(Type.Code.CLUSTER);
+	    return type.size();
+	}
+
+	public int getErrorCode() {
+		getSubtype(Type.Code.ERROR);
+	    return ByteManip.getInt(getOffset());
+	}
+
+	public String getErrorMessage() {
+		getSubtype(Type.Code.ERROR);
+	    ByteArrayView pos = getOffset();
+	    int index = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4);
+	    try {
+	        return new String(heap.get(index), STRING_ENCODING);
+	    } catch (UnsupportedEncodingException e) {
+	        throw new RuntimeException("Unsupported string encoding.");
+	    }
+	}
+
+	public Data getErrorPayload() {
+	    getSubtype(Type.Code.ERROR);
+	    ByteArrayView pos = getOffset();
+	    return new Data(type.getSubtype(0),
+	    		        pos.getBytes(), pos.getOffset() + 8, heap);
+	}
+
+	
+	// indexed getters
+	public boolean getBool(int... indices) { return get(indices).getBool(); }
+    public int getInt(int... indices) { return get(indices).getInt(); }
+	public long getWord(int... indices) { return get(indices).getWord(); }
+	public byte[] getBytes(int... indices) { return get(indices).getBytes(); }
+	public String getString(int... indices) { return get(indices).getString(); }
+	public String getString(String encoding, int... indices) throws UnsupportedEncodingException {
+		return get(indices).getString(encoding);
+	}
+	public double getValue(int... indices) { return get(indices).getValue(); }
+	public Complex getComplex(int... indices) { return get(indices).getComplex(); }
+	public String getUnits(int... indices) { return getSubtype(indices).getUnits(); }
+	public Date getTime(int... indices) { return get(indices).getTime(); }
+	public int getArraySize(int... indices) { return get(indices).getArraySize(); }
+	public int[] getArrayShape(int... indices) { return get(indices).getArrayShape(); }
+	public int getClusterSize(int... indices) {
+	    return getSubtype(Type.Code.CLUSTER, indices).size();
+	}
+
+	// setters
+	public Data setBool(boolean data) {
+    	getSubtype(Type.Code.BOOL);
+        ByteManip.setBool(getOffset(), data);
         return this;
     }
-
     
-    // int
-    public boolean isInt(int... indices) {
-        return getSubtype(indices) instanceof org.labrad.types.Int;
-    }
+    public Data setInt(int data) {
+		getSubtype(Type.Code.INT);
+	    ByteManip.setInt(getOffset(), data);
+	    return this;
+	}
 
-    public int getInt(int... indices) {
-    	getSubtype(Type.Code.INT, indices);
-        return ByteManip.getInt(getOffset(indices));
-    }
+	public Data setWord(long data) {
+		getSubtype(Type.Code.WORD);
+	    ByteManip.setWord(getOffset(), data);
+	    return this;
+	}
 
-    public Data setInt(int data, int... indices) {
-    	getSubtype(Type.Code.INT, indices);
-        ByteManip.setInt(getOffset(indices), data);
-        return this;
-    }
+	public Data setBytes(byte[] data) {
+		getSubtype(Type.Code.STR);
+		ByteArrayView ofs = getOffset();
+		int heapLocation = ByteManip.getInt(ofs);
+		if (heapLocation == -1) {
+			// not yet set in the heap
+			ByteManip.setInt(ofs, heap.size());
+			heap.add(data);
+		} else {
+			// already set in the heap, reuse old spot
+			heap.set(heapLocation, data);
+		}
+	    return this;
+	}
 
-    
-    // word
-    public boolean isWord(int... indices) {
-        return getSubtype(indices) instanceof org.labrad.types.Word;
-    }
+	public Data setString(String data) {
+	    try {
+	        setBytes(data.getBytes(STRING_ENCODING));
+	    } catch (UnsupportedEncodingException e) {
+	        throw new RuntimeException("Unsupported string encoding.");
+	    }
+	    return this;
+	}
 
-    public long getWord(int... indices) {
-    	getSubtype(Type.Code.WORD, indices);
-        return ByteManip.getWord(getOffset(indices));
-    }
+	public Data setString(String data, String encoding)
+	    	throws UnsupportedEncodingException {
+		return setBytes(data.getBytes(encoding));
+	}
+	
+	public Data setValue(double data) {
+		getSubtype(Type.Code.VALUE);
+	    ByteManip.setDouble(getOffset(), data);
+	    return this;
+	}
 
-    public Data setWord(long data, int... indices) {
-    	getSubtype(Type.Code.WORD, indices);
-        ByteManip.setWord(getOffset(indices), data);
-        return this;
-    }
+	public Data setComplex(Complex data) {
+		getSubtype(Type.Code.COMPLEX);
+	    ByteManip.setComplex(getOffset(), data);
+	    return this;
+	}
 
-    
-    // bytes
-    public boolean isBytes(int... indices) {
-        return getSubtype(indices) instanceof org.labrad.types.Str;
-    }
+	public Data setComplex(double re, double im) {
+		return setComplex(new Complex(re, im));
+	}
 
-    public byte[] getBytes(int... indices) {
-    	getSubtype(Type.Code.STR, indices);
-        return heap.get(ByteManip.getInt(getOffset(indices)));
-    }
+	public Data setTime(Date date) {
+		getSubtype(Type.Code.TIME);
+		long millis = date.getTime();
+		long seconds = millis / 1000 + deltaSeconds;
+		long fraction = millis % 1000;
+		fraction = (long)(((double) fraction) / 1000 * Long.MAX_VALUE);
+		ByteArrayView ofs = getOffset();
+		ByteManip.setLong(ofs.getBytes(), ofs.getOffset(), seconds);
+		ByteManip.setLong(ofs.getBytes(), ofs.getOffset() + 8, fraction);
+	    return this;
+	}
+	
+	public Data setArraySize(int size) {
+	    setArrayShape(new int[] {size});
+	    return this;
+	}
 
-    public Data setBytes(byte[] data, int... indices) {
-    	getSubtype(Type.Code.STR, indices);
-    	ByteArrayView ofs = getOffset(indices);
-    	int heapLocation = ByteManip.getInt(ofs);
-    	if (heapLocation == -1) {
-    		// not yet set in the heap
-    		ByteManip.setInt(ofs, heap.size());
-    		heap.add(data);
-    	} else {
-    		// already set in the heap, reuse old spot
-    		heap.set(heapLocation, data);
-    	}
-        return this;
-    }
-    
-    
-    // str
-    public boolean isString(int... indices) {
-        return getSubtype(indices) instanceof org.labrad.types.Str;
-    }
+	public Data setArrayShape(List<Integer> shape) {
+		int[] shapeArray = new int[shape.size()];
+		for (int i = 0; i < shape.size(); i++) {
+			shapeArray[i] = shape.get(i);
+		}
+		return setArrayShape(shapeArray);
+	}
+	
+	public Data setArrayShape(int... shape) {
+	    getSubtype(Type.Code.LIST);
+	    Type elementType = type.getSubtype(0);
+	    int depth = type.getDepth();
+	    if (shape.length != depth) {
+	        throw new RuntimeException("Array depth mismatch!");
+	    }
+	    ByteArrayView pos = getOffset();
+	    int size = 1;
+	    for (int i = 0; i < depth; i++) {
+	        ByteManip.setInt(pos.getBytes(), pos.getOffset() + 4*i, shape[i]);
+	        size *= shape[i];
+	    }
+	    byte[] buf = getFilledByteArray(elementType.dataWidth() * size);
+	    int heapIndex = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4*depth);
+	    if (heapIndex == -1) {
+	    	ByteManip.setInt(pos.getBytes(), pos.getOffset() + 4*depth, heap.size());
+	    	heap.add(buf);
+	    } else {
+	    	heap.set(heapIndex, buf);
+	    }
+	    return this;
+	}
 
-    public String getString(int... indices) {
-        try {
-            return new String(getBytes(indices), STRING_ENCODING);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("Unsupported string encoding.");
-        }
-    }
+	public Data setError(int code, String message) {
+		getSubtype(Type.Code.ERROR);
+	    ByteArrayView pos = getOffset();
+	    ByteManip.setInt(pos.getBytes(), pos.getOffset(), code);
+	    try {
+	    	byte[] buf = message.getBytes(STRING_ENCODING);
+	    	int heapIndex = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4);
+	        if (heapIndex == -1) {
+	        	ByteManip.setInt(pos.getBytes(), pos.getOffset()+4, heap.size());
+	        	heap.add(buf);
+	        } else {
+	        	heap.set(heapIndex, buf);
+	        }
+	    } catch (UnsupportedEncodingException e) {
+	    	throw new RuntimeException("Unicode encoding exception.");
+	    }
+	    return this;
+	}
 
-    public String getString(String encoding, int... indices) throws UnsupportedEncodingException {
-    	return new String(getBytes(indices), encoding);
-    }
-    
-    public Data setString(String data, int... indices) {
-        try {
-            setBytes(data.getBytes(STRING_ENCODING), indices);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("Unsupported string encoding.");
-        }
-        return this;
-    }
-
-    public Data setString(String data, String encoding, int... indices)
-                    throws UnsupportedEncodingException {
-    	setBytes(data.getBytes(encoding), indices);
+	
+	// indexed setters
+	public Data setBool(boolean data, int... indices) {
+    	get(indices).setBool(data);
     	return this;
     }
 
-    
-    // value
-    public boolean isValue(int... indices) {
-        return getSubtype(indices) instanceof org.labrad.types.Value;
-    }
-
-    public double getValue(int... indices) {
-    	getSubtype(Type.Code.VALUE, indices);
-        return ByteManip.getDouble(getOffset(indices));
-    }
-
-    public Data setValue(double data, int... indices) {
-    	getSubtype(Type.Code.VALUE, indices);
-        ByteManip.setDouble(getOffset(indices), data);
-        return this;
-    }
-
-    
-    // complex
-    public boolean isComplex(int... indices) {
-        return getSubtype(indices) instanceof org.labrad.types.Complex;
-    }
-
-    public Complex getComplex(int... indices) {
-    	getSubtype(Type.Code.COMPLEX, indices);
-        return ByteManip.getComplex(getOffset(indices));
-    }
-
-    public Data setComplex(Complex data, int... indices) {
-    	getSubtype(Type.Code.COMPLEX, indices);
-        ByteManip.setComplex(getOffset(indices), data);
-        return this;
-    }
-
-    public Data setComplex(double re, double im, int... indices) {
-    	return setComplex(new Complex(re, im), indices);
-    }
-
-    
-    // units
-    public boolean hasUnits(int... indices) {
-        Type type = getSubtype(indices);
-        return ((type instanceof org.labrad.types.Value) ||
-        		(type instanceof org.labrad.types.Complex))
-               && (type.getUnits() != null);
-    }
-
-    public String getUnits(int... indices) {
-    	return getSubtype(indices).getUnits();
-    }
-
-    
-    // time
-    // TODO check timezones in time translation
-    // LabRAD measures time as seconds and fractions of a second since Jan 1, 1904 GMT.
-    // The Java Date class measures time as milliseconds since Jan 1, 1970 GMT.
-    // The difference between these two is 24107 days.
-    // 
-    private static long deltaSeconds = 24107 * 24 * 60 * 60;
-    
-    public boolean isTime(int... indices) {
-        return getSubtype(indices) instanceof org.labrad.types.Time;
-    }
-
-    public Date getTime(int... indices) {
-    	getSubtype(Type.Code.TIME, indices);
-    	ByteArrayView ofs = getOffset(indices);
-    	long seconds = ByteManip.getLong(ofs.getBytes(), ofs.getOffset());
-    	long fraction = ByteManip.getLong(ofs.getBytes(), ofs.getOffset() + 8);
-    	seconds -= deltaSeconds;
-    	fraction = (long)(((double) fraction) / Long.MAX_VALUE * 1000);
-        return new Date(seconds * 1000 + fraction);
-    }
-
-    public Data setTime(Date date, int... indices) {
-    	getSubtype(Type.Code.TIME, indices);
-    	long millis = date.getTime();
-    	long seconds = millis / 1000 + deltaSeconds;
-    	long fraction = millis % 1000;
-    	fraction = (long)(((double) fraction) / 1000 * Long.MAX_VALUE);
-    	ByteArrayView ofs = getOffset(indices);
-    	ByteManip.setLong(ofs.getBytes(), ofs.getOffset(), seconds);
-    	ByteManip.setLong(ofs.getBytes(), ofs.getOffset(), fraction);
-        return this;
-    }
-
-    
-    // arrays
-    public boolean isArray(int... indices) {
-        return getSubtype(indices) instanceof org.labrad.types.List;
-    }
-
-    public int[] getArrayShape(int... indices) {
-    	Type type = getSubtype(Type.Code.LIST, indices);
-        int depth = type.getDepth();
-        int[] shape = new int[depth];
-        ByteArrayView pos = getOffset(indices);
-        for (int i = 0; i < depth; i++) {
-            shape[i] = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4*i);
-        }
-        return shape;
-    }
-
-    public int getArraySize(int... indices) {
-    	int[] shape = getArrayShape(indices);
-    	if (shape.length > 1) {
-    		throw new RuntimeException("Can't get size of multi-dimensional array.  Use getArrayShape.");
-    	}
-        return shape[0];
+    public Data setInt(int data, int... indices) {
+    	get(indices).setInt(data);
+    	return this;
     }
     
-    public Data setArraySize(int size, int... indices) {
-        setArrayShape(new int[] {size}, indices);
-        return this;
+    public Data setWord(long data, int... indices) {
+    	get(indices).setWord(data);
+    	return this;
     }
-
-    public Data setArrayShape(int... shape) {
-        setArrayShape(shape, new int[] {});
-        return this;
-    }
-
-    public Data setArrayShape(int[] shape, int... indices) {
-        Type type = getSubtype(Type.Code.LIST, indices);
-        Type elementType = type.getSubtype(0);
-        int depth = type.getDepth();
-        if (shape.length != depth) {
-            throw new RuntimeException("Array depth mismatch!");
-        }
-        ByteArrayView pos = getOffset(indices);
-        int size = 1;
-        for (int i = 0; i < depth; i++) {
-            ByteManip.setInt(pos.getBytes(), pos.getOffset() + 4*i, shape[i]);
-            size *= shape[i];
-        }
-        byte[] buf = getFilledByteArray(elementType.dataWidth() * size);
-        int heapIndex = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4*depth);
-        if (heapIndex == -1) {
-        	ByteManip.setInt(pos.getBytes(), pos.getOffset() + 4*depth, heap.size());
-        	heap.add(buf);
-        } else {
-        	heap.set(heapIndex, buf);
-        }
-        return this;
-    }
-
     
-    // clusters
-    public boolean isCluster(int... indices) {
-        return getSubtype(indices) instanceof org.labrad.types.Cluster;
-    }
+    public Data setBytes(byte[] data, int... indices) {
+		get(indices).setBytes(data);
+	    return this;
+	}
 
-    public int getClusterSize(int... indices) {
-        return getSubtype(Type.Code.CLUSTER, indices).size();
-    }
+	public Data setString(String data, int... indices) {
+		get(indices).setString(data);
+	    return this;
+	}
 
+	public Data setString(String data, String encoding, int... indices)
+			throws UnsupportedEncodingException {
+		get(indices).setString(data, encoding);
+		return this;
+	}
+
+	public Data setValue(double data, int... indices) {
+		get(indices).setValue(data);
+		return this;
+	}
+
+	public Data setComplex(Complex data, int... indices) {
+		get(indices).setComplex(data);
+	    return this;
+	}
+
+	public Data setComplex(double re, double im, int... indices) {
+		return setComplex(new Complex(re, im), indices);
+	}
+
+	public Data setTime(Date date, int... indices) {
+		get(indices).setTime(date);
+	    return this;
+	}
+
+	public Data setArraySize(int size, int... indices) {
+		get(indices).setArraySize(size);
+	    return this;
+	}
+
+	public Data setArrayShape(int[] shape, int... indices) {
+		get(indices).setArrayShape(shape);
+	    return this;
+	}
+	
+	public Data setArrayShape(List<Integer> shape, int... indices) {
+		get(indices).setArrayShape(shape);
+	    return this;
+	}
+
+	// vectorized getters
+	public <T> List<T> getList(Type.Code code, Getter<T> getter) {
+		getSubtype(Type.Code.LIST);
+		getSubtype(code, 0);
+		List<T> result = new ArrayList<T>();
+		for (int i = 0; i < getArraySize(); i++) {
+			result.add(getter.get(get(i)));
+		}
+		return result;
+	}
+	public interface Getter<T> {
+		T get(Data data);
+	}
+	private static Getter<Boolean> boolGetter = new Getter<Boolean>() {
+		public Boolean get(Data data) { return data.getBool(); }
+	};
+	private static Getter<Integer> intGetter = new Getter<Integer>() {
+		public Integer get(Data data) { return data.getInt(); }
+	};
+	private static Getter<Long> wordGetter = new Getter<Long>() {
+		public Long get(Data data) { return data.getWord(); }
+	};
+	private static Getter<String> stringGetter = new Getter<String>() {
+		public String get(Data data) { return data.getString(); }
+	};
+	
+	public List<Boolean> getBoolList() { return getList(Type.Code.BOOL, boolGetter); }
+	public List<Integer> getIntList() { return getList(Type.Code.INT, intGetter); }
+	public List<Long> getWordList() { return getList(Type.Code.WORD, wordGetter); }
+	public List<String> getStringList() { return getList(Type.Code.STR, stringGetter); }
+	
+	// vectorized indexed getters
+	public List<Boolean> getBoolList(int...indices) { return get(indices).getBoolList(); }
+	public List<Integer> getIntList(int...indices) { return get(indices).getIntList(); }
+	public List<Long> getWordList(int...indices) { return get(indices).getWordList(); }
+	public List<String> getStringList(int...indices) { return get(indices).getStringList(); }
     
-    // errors
-    public boolean isError(int... indices) {
-        return getSubtype(indices) instanceof org.labrad.types.Error;
+    // vectorized setters
+	public <T> Data setList(List<T> data, Type.Code code, Setter<T> setter) {
+		getSubtype(Type.Code.LIST);
+		getSubtype(code, 0);
+		setArraySize(data.size());
+		for (int i = 0; i < data.size(); i++) {
+			setter.set(get(i), data.get(i));
+		}
+		return this;
+	}
+	public interface Setter<T> {
+		void set(Data data, T value);
+	}
+	private static Setter<Boolean> boolSetter = new Setter<Boolean>() {
+		public void set(Data data, Boolean value) { data.setBool(value); }
+	};
+	private static Setter<Integer> intSetter = new Setter<Integer>() {
+		public void set(Data data, Integer value) { data.setInt(value); }
+	};
+	private static Setter<Long> wordSetter = new Setter<Long>() {
+		public void set(Data data, Long value) { data.setWord(value); }
+	};
+	private static Setter<String> stringSetter = new Setter<String>() {
+		public void set(Data data, String value) { data.setString(value); }
+	};
+	
+	
+	public Data setBoolList(List<Boolean> data) {
+		return setList(data, Type.Code.BOOL, boolSetter);
+	}
+	
+	public Data setIntList(List<Integer> data) {
+		return setList(data, Type.Code.INT, intSetter);
     }
-
-    public int getErrorCode(int... indices) {
-    	getSubtype(Type.Code.ERROR, indices);
-        return ByteManip.getInt(getOffset(indices));
+	
+	public Data setWordList(List<Long> data) {
+		return setList(data, Type.Code.WORD, wordSetter);
     }
-
-    public String getErrorMessage(int... indices) {
-    	getSubtype(Type.Code.ERROR, indices);
-        ByteArrayView pos = getOffset(indices);
-        int index = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4);
-        try {
-            return new String(heap.get(index), STRING_ENCODING);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("Unsupported string encoding.");
-        }
+    
+    public Data setStringList(List<String> data) {
+    	return setList(data, Type.Code.STR, stringSetter);
+	}
+    
+    // vectorized indexed setters
+    public Data setBoolList(List<Boolean> data, int... indices) {
+    	get(indices).setBoolList(data);
+    	return this;
     }
-
-    public Data getErrorPayload(int... indices) {
-        Type type = getSubtype(Type.Code.ERROR, indices);
-        ByteArrayView pos = getOffset(indices);
-        return new Data(type.getSubtype(0),
-        		        pos.getBytes(), pos.getOffset() + 8, heap);
+    
+    public Data setIntList(List<Integer> data, int... indices) {
+    	get(indices).setIntList(data);
+    	return this;
     }
-
-    public Data setError(int code, String message, int... indices) {
-    	getSubtype(Type.Code.ERROR, indices);
-        ByteArrayView pos = getOffset(indices);
-        ByteManip.setInt(pos.getBytes(), pos.getOffset(), code);
-        try {
-        	byte[] buf = message.getBytes(STRING_ENCODING);
-        	int heapIndex = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4);
-            if (heapIndex == -1) {
-            	ByteManip.setInt(pos.getBytes(), pos.getOffset()+4, heap.size());
-            	heap.add(buf);
-            } else {
-            	heap.set(heapIndex, buf);
-            }
-        } catch (UnsupportedEncodingException e) {
-        	throw new RuntimeException("Unicode encoding exception.");
-        }
-        return this;
+    
+    public Data setWordList(List<Long> data, int... indices) {
+    	get(indices).setWordList(data);
+    	return this;
     }
-
+    
+    public Data setStringList(List<String> strings, int... indices) {
+    	return get(indices).setStringList(strings);
+    }
+    
+    
     public static void main(String[] args) throws IOException {
         byte[] bs = new byte[100];
         Random rand = new Random();

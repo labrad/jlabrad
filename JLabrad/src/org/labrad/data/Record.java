@@ -2,13 +2,13 @@ package org.labrad.data;
 
 
 public class Record {
-    private String name;
+    private String name = null;
 
     private long ID;
 
     private Data data;
 
-    private boolean lookedUp = true;
+    private boolean needsLookup = false;
 
     public Record(String name) {
         this(name, Data.EMPTY);
@@ -17,7 +17,7 @@ public class Record {
     public Record(String name, Data data) {
         this.name = name;
         this.data = data;
-        lookedUp = false;
+        needsLookup = true;
     }
 
     public Record(long ID) {
@@ -32,10 +32,14 @@ public class Record {
     public Data getData() { return data; }
     public String getName() { return name; }
     public long getID() { return ID; }
-    public boolean needsLookup() { return !lookedUp; }
+    public void setID(long ID) {
+    	this.ID = ID;
+    	this.needsLookup = false;
+    }
+    public boolean needsLookup() { return needsLookup; }
 
     public String toString() {
-        if (!lookedUp) {
+        if (name != null) {
             return "Record(" + name + ", " + data.pretty() + ")";
         }
         return "Record(" + ID + ", " + data.pretty() + ")";

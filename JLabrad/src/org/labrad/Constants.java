@@ -1,12 +1,23 @@
 package org.labrad;
 
-class Constants {
+import org.labrad.data.Context;
+
+public class Constants {
 	/** ID of the LabRAD manager. */
-	static final long MANAGER = 1;
+	public static final long MANAGER = 1;
 	
+	/** ID of the manager setting to retrieve a list of servers. */
+	public static final long SERVERS = 1;
+	
+	/** ID of the manager setting to retrieve a settings list for a server. */
+	public static final long SETTINGS = 2;
+
 	/** ID of the lookup setting on the manager. */
-	static final long LOOKUP = 3;
+	public static final long LOOKUP = 3;
 	
 	/** Version number of the LabRAD protocol version implemented here. */
-	static final long PROTOCOL = 1;
+	public static final long PROTOCOL = 1;
+	
+	/** Default context in which requests will be sent. */
+	public static final Context DEFAULT_CONTEXT = new Context(0, 0);
 }

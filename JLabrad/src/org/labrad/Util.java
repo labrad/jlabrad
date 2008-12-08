@@ -1,5 +1,7 @@
 package org.labrad;
 
+import java.util.Map;
+
 public class Util {
 	/**
      * Converts a byte array into a hex string.
@@ -22,4 +24,19 @@ public class Util {
         }
         return dump;
     }
+    
+    /**
+	 * Get an environment variable, or fall back on the given default if not found.
+	 * @param key
+	 * @param defaultVal
+	 * @return
+	 */
+	public String getEnv(String key, String defaultVal) {
+		Map<String, String> env = System.getenv();
+		if (env.containsKey(key)) {
+			return env.get(key);
+		} else {
+			return defaultVal;
+		}
+	}
 }
