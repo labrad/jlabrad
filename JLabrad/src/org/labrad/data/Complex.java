@@ -1,7 +1,7 @@
 package org.labrad.data;
 
 public class Complex {
-    public double real, imag;
+    public final double real, imag;
 
     public Complex(double real, double imag) {
         this.real = real;

@@ -1,6 +1,7 @@
 package org.labrad.data;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.labrad.Constants;
@@ -85,6 +86,11 @@ public class Request {
     	return records.size() - 1;
     }
     
+    public int addRecord(Record record) {
+    	add(record);
+    	return records.size() - 1;
+    }
+    
     /**
      * Add an empty record for the given setting name, returning the packet for chaining.
      * @param setting
@@ -112,6 +118,21 @@ public class Request {
     public Request add(long settingID, Data data) {
     	records.add(new Record(settingID, data));
     	return this;
+    }
+    
+    public Request add(Record record) {
+    	records.add(record);
+    	return this;
+    }
+    
+    // add collections
+    public Request addAll(List<Record> records) {
+    	records.addAll(records);
+    	return this;
+    }
+    
+    public Request addAll(Record[] records) {
+    	return addAll(Arrays.asList(records));
     }
     
     public int size() { return records.size(); }

@@ -3,11 +3,8 @@ package org.labrad.data;
 
 public class Record {
     private String name = null;
-
     private long ID;
-
     private Data data;
-
     private boolean needsLookup = false;
 
     public Record(String name) {

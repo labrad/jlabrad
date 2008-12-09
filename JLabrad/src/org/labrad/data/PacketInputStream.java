@@ -26,20 +26,20 @@ public class PacketInputStream extends FilterInputStream {
 
         byte[] hdr = readBytes(20);
         Data hdrdata = Data.unflatten(hdr, Type.HEADER_TYPE);
-        ctxHigh = hdrdata.getWord(0);
-        ctxLow = hdrdata.getWord(1);
-        request = hdrdata.getInt(2);
-        source = hdrdata.getWord(3);
-        dataLen = hdrdata.getWord(4);
+        ctxHigh = hdrdata.get(0).getWord();
+        ctxLow = hdrdata.get(1).getWord();
+        request = hdrdata.get(2).getInt();
+        source = hdrdata.get(3).getWord();
+        dataLen = hdrdata.get(4).getWord();
 
         byte[] recbuf = readBytes((int)dataLen);
         ByteArrayInputStream is = new ByteArrayInputStream(recbuf);
         List<Record> records = new ArrayList<Record>();
         while (is.available() > 0) {
             Data recdata = Data.unflatten(is, Type.RECORD_TYPE);
-            long ID = recdata.getWord(0);
-            String tag = recdata.getString(1);
-            byte[] data = recdata.getBytes(2);
+            long ID = recdata.get(0).getWord();
+            String tag = recdata.get(1).getString();
+            byte[] data = recdata.get(2).getBytes();
             records.add(new Record(ID, Data.unflatten(data, tag)));
         }
         return new Packet(new Context(ctxHigh, ctxLow), source, request, records);

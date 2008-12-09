@@ -33,7 +33,7 @@ import org.labrad.errors.IncorrectPasswordException;
 import org.labrad.errors.LabradException;
 
 public class Client {
-	private static final String NAME = "Java Client";
+	private static final String DEFAULT_NAME = "Java Client";
     
     private String host;
     private int port;
@@ -284,7 +284,7 @@ public class Client {
 	    System.out.println(loginMessage);
 	
 	    // send identification packet
-	    data = new Data("ws").setWord(Constants.PROTOCOL, 0).setString(NAME, 1);
+	    data = new Data("ws").setWord(Constants.PROTOCOL, 0).setString(DEFAULT_NAME, 1);
 	    response = sendAndWait(new Request(Constants.MANAGER).add(0, data)).get(0);
 	    ID = response.getWord();
 	}
@@ -565,9 +565,11 @@ public class Client {
      */
     private List<Long> lookupSettings(long serverID, List<String> settings)
             throws IOException, InterruptedException, ExecutionException {
+    	// TODO: may need to do an s*s lookup if cache has been invalidated in the meantime.
+    	// TODO: maybe need to implement the cache as an opaque object.
     	Data data = new Data("w*s");
-    	data.setWord(serverID, 0);
-    	data.setStringList(settings, 1);
+    	data.get(0).setWord(serverID);
+    	data.get(1).setStringList(settings);
     	//data.setArraySize(settings.size(), 1);
     	//for (int i = 0; i < settings.size(); i++) {
     	//    data.setString(settings.get(i), 1, i);
@@ -576,7 +578,7 @@ public class Client {
     	request.add(Constants.LOOKUP, data);
     	ConcurrentMap<String, Long> cache = settingCache.get(serverID);
     	Data response = sendAndWait(request).get(0);
-    	List<Long> result = response.getWordList(1);
+    	List<Long> result = response.get(1).getWordList();
     	// cache all the lookup results
     	for (int i = 0; i < settings.size(); i++) {
     		cache.put(settings.get(i), result.get(i));

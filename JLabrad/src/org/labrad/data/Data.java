@@ -326,24 +326,9 @@ public class Data {
 	        }
     	}
     }
-
-    public String toString(int... indices) {
-    	return get(indices).toString();
-    }
     
     public String toString() {
     	return "Data(\"" + type.toString() + "\")";
-    }
-    
-    /**
-     * Return a human-readable, pretty-printed version of this LabRAD data,
-     * or some indexed subpart of it.
-     * 
-     * @param indices
-     * @return
-     */
-    public String pretty(int... indices) {
-        return get(indices).pretty();
     }
 
     /**
@@ -379,7 +364,7 @@ public class Data {
 
             case CLUSTER:
                 for (int i = 0; i < getClusterSize(); i++) {
-                    s += ", " + pretty(i);
+                    s += ", " + get(i).pretty();
                 }
                 return "(" + s.substring(2) + ")";
 
@@ -404,7 +389,7 @@ public class Data {
         for (int i = 0; i < shape[level]; i++) {
             indices[level] = i;
             if (level == shape.length - 1) {
-                s += ", " + pretty(indices);
+                s += ", " + get(indices).pretty();
             } else {
                 s += ", " + prettyList(shape, indices, level + 1);
             }
@@ -583,17 +568,17 @@ public class Data {
     }
 	
 	// indexed type checks
-	public boolean isBool(int... indices) { return get(indices).isBool(); }
-    public boolean isInt(int... indices) { return get(indices).isInt(); }
-	public boolean isWord(int... indices) { return get(indices).isWord(); }
-	public boolean isBytes(int... indices) { return get(indices).isBool(); }
-	public boolean isString(int... indices) { return get(indices).isString(); }
-	public boolean isValue(int... indices) { return get(indices).isValue(); }
-	public boolean isComplex(int... indices) { return get(indices).isComplex(); }
-	public boolean isTime(int... indices) { return get(indices).isTime(); }
-	public boolean isArray(int... indices) { return get(indices).isArray(); }
-	public boolean isCluster(int... indices) { return get(indices).isCluster(); }
-	public boolean hasUnits(int... indices) { return get(indices).hasUnits(); }
+//	public boolean isBool(int... indices) { return get(indices).isBool(); }
+//    public boolean isInt(int... indices) { return get(indices).isInt(); }
+//	public boolean isWord(int... indices) { return get(indices).isWord(); }
+//	public boolean isBytes(int... indices) { return get(indices).isBool(); }
+//	public boolean isString(int... indices) { return get(indices).isString(); }
+//	public boolean isValue(int... indices) { return get(indices).isValue(); }
+//	public boolean isComplex(int... indices) { return get(indices).isComplex(); }
+//	public boolean isTime(int... indices) { return get(indices).isTime(); }
+//	public boolean isArray(int... indices) { return get(indices).isArray(); }
+//	public boolean isCluster(int... indices) { return get(indices).isCluster(); }
+//	public boolean hasUnits(int... indices) { return get(indices).hasUnits(); }
 	
 	// getters
 	public boolean getBool() {
@@ -701,23 +686,23 @@ public class Data {
 
 	
 	// indexed getters
-	public boolean getBool(int... indices) { return get(indices).getBool(); }
-    public int getInt(int... indices) { return get(indices).getInt(); }
-	public long getWord(int... indices) { return get(indices).getWord(); }
-	public byte[] getBytes(int... indices) { return get(indices).getBytes(); }
-	public String getString(int... indices) { return get(indices).getString(); }
-	public String getString(String encoding, int... indices) throws UnsupportedEncodingException {
-		return get(indices).getString(encoding);
-	}
-	public double getValue(int... indices) { return get(indices).getValue(); }
-	public Complex getComplex(int... indices) { return get(indices).getComplex(); }
-	public String getUnits(int... indices) { return getSubtype(indices).getUnits(); }
-	public Date getTime(int... indices) { return get(indices).getTime(); }
-	public int getArraySize(int... indices) { return get(indices).getArraySize(); }
-	public int[] getArrayShape(int... indices) { return get(indices).getArrayShape(); }
-	public int getClusterSize(int... indices) {
-	    return getSubtype(Type.Code.CLUSTER, indices).size();
-	}
+//	public boolean getBool(int... indices) { return get(indices).getBool(); }
+//    public int getInt(int... indices) { return get(indices).getInt(); }
+//	public long getWord(int... indices) { return get(indices).getWord(); }
+//	public byte[] getBytes(int... indices) { return get(indices).getBytes(); }
+//	public String getString(int... indices) { return get(indices).getString(); }
+//	public String getString(String encoding, int... indices) throws UnsupportedEncodingException {
+//		return get(indices).getString(encoding);
+//	}
+//	public double getValue(int... indices) { return get(indices).getValue(); }
+//	public Complex getComplex(int... indices) { return get(indices).getComplex(); }
+//	public String getUnits(int... indices) { return getSubtype(indices).getUnits(); }
+//	public Date getTime(int... indices) { return get(indices).getTime(); }
+//	public int getArraySize(int... indices) { return get(indices).getArraySize(); }
+//	public int[] getArrayShape(int... indices) { return get(indices).getArrayShape(); }
+//	public int getClusterSize(int... indices) {
+//	    return getSubtype(Type.Code.CLUSTER, indices).size();
+//	}
 
 	// setters
 	public Data setBool(boolean data) {
@@ -950,10 +935,10 @@ public class Data {
 	public List<String> getStringList() { return getList(Type.Code.STR, stringGetter); }
 	
 	// vectorized indexed getters
-	public List<Boolean> getBoolList(int...indices) { return get(indices).getBoolList(); }
-	public List<Integer> getIntList(int...indices) { return get(indices).getIntList(); }
-	public List<Long> getWordList(int...indices) { return get(indices).getWordList(); }
-	public List<String> getStringList(int...indices) { return get(indices).getStringList(); }
+//	public List<Boolean> getBoolList(int...indices) { return get(indices).getBoolList(); }
+//	public List<Integer> getIntList(int...indices) { return get(indices).getIntList(); }
+//	public List<Long> getWordList(int...indices) { return get(indices).getWordList(); }
+//	public List<String> getStringList(int...indices) { return get(indices).getStringList(); }
     
     // vectorized setters
 	public <T> Data setList(List<T> data, Type.Code code, Setter<T> setter) {
@@ -1091,7 +1076,7 @@ public class Data {
             d1.setString("This is string " + Integer.toString(count), count);
         }
         for (count = 0; count < 20; count++) {
-            System.out.println(d1.getString(count));
+            System.out.println(d1.get(count).getString());
         }
 
         d1 = new Data("biwsvc");
@@ -1110,12 +1095,12 @@ public class Data {
         d1.setValue(d, 4);
         d1.setComplex(re, im, 5);
 
-        assert b == d1.getBool(0);
-        assert i == d1.getInt(1);
-        assert l == d1.getWord(2);
-        assert s.equals(d1.getString(3));
-        assert d == d1.getValue(4);
-        Complex c = d1.getComplex(5);
+        assert b == d1.get(0).getBool();
+        assert i == d1.get(1).getInt();
+        assert l == d1.get(2).getWord();
+        assert s.equals(d1.get(3).getString());
+        assert d == d1.get(4).getValue();
+        Complex c = d1.get(5).getComplex();
         assert re == c.real;
         assert im == c.imag;
         System.out.println("Cluster okay.");
@@ -1139,12 +1124,12 @@ public class Data {
             d1.setValue(d, count, 4);
             d1.setComplex(re, im, count, 5);
 
-            assert b == d1.getBool(count, 0);
-            assert i == d1.getInt(count, 1);
-            assert l == d1.getWord(count, 2);
-            assert s.equals(d1.getString(count, 3));
-            assert d == d1.getValue(count, 4);
-            c = d1.getComplex(count, 5);
+            assert b == d1.get(count, 0).getBool();
+            assert i == d1.get(count, 1).getInt();
+            assert l == d1.get(count, 2).getWord();
+            assert s.equals(d1.get(count, 3).getString());
+            assert d == d1.get(count, 4).getValue();
+            c = d1.get(count, 5).getComplex();
             assert re == c.real;
             assert im == c.imag;
         }

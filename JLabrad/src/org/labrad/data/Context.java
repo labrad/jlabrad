@@ -1,7 +1,7 @@
 package org.labrad.data;
 
 public class Context {
-    private long high, low;
+    private final long high, low;
 
     public Context(long high, long low) {
         this.high = high;
