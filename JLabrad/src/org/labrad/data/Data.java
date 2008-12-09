@@ -529,6 +529,11 @@ public class Data {
         return new ByteArrayView(data, ofs);
     }
 
+    /**
+     * Get a Data view into a subobject at the given indices list.
+     * @param indices
+     * @return
+     */
     public Data get(List<Integer> indices) {
     	int[] indexArray = new int[indices.size()];
     	for (int i = 0; i < indices.size(); i++) {
@@ -538,7 +543,7 @@ public class Data {
     }
     
     /**
-     * Get a Data view into a subobject given by indices.
+     * Get a Data view into a subobject at the given indices array.
      * @param indices
      * @return
      */
@@ -548,6 +553,11 @@ public class Data {
         return new Data(type, pos.getBytes(), pos.getOffset(), heap);
     }
 
+    /**
+     * Set this data object to be a copy of the given data object.
+     * @param data
+     * @return
+     */
     public Data set(Data data) {
     	// TODO: implement this!
     	throw new RuntimeException("Not implemented!");
@@ -972,21 +982,10 @@ public class Data {
 	};
 	
 	
-	public Data setBoolList(List<Boolean> data) {
-		return setList(data, Type.Code.BOOL, boolSetter);
-	}
-	
-	public Data setIntList(List<Integer> data) {
-		return setList(data, Type.Code.INT, intSetter);
-    }
-	
-	public Data setWordList(List<Long> data) {
-		return setList(data, Type.Code.WORD, wordSetter);
-    }
-    
-    public Data setStringList(List<String> data) {
-    	return setList(data, Type.Code.STR, stringSetter);
-	}
+	public Data setBoolList(List<Boolean> data) { return setList(data, Type.Code.BOOL, boolSetter); }
+	public Data setIntList(List<Integer> data) { return setList(data, Type.Code.INT, intSetter); }
+	public Data setWordList(List<Long> data) { return setList(data, Type.Code.WORD, wordSetter); }
+    public Data setStringList(List<String> data) { return setList(data, Type.Code.STR, stringSetter); }
     
     // vectorized indexed setters
     public Data setBoolList(List<Boolean> data, int... indices) {
@@ -1009,6 +1008,8 @@ public class Data {
     }
     
     
+    
+    // some basic tests of the data object
     public static void main(String[] args) throws IOException {
         byte[] bs = new byte[100];
         Random rand = new Random();
