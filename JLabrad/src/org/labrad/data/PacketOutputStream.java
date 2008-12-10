@@ -31,8 +31,8 @@ public class PacketOutputStream extends BufferedOutputStream {
             Data recData = new Data(Type.RECORD_TYPE);
             recData.setWord(rec.getID(), 0);
             recData.setString(rec.getData().getTag(), 1);
-            recData.setBytes(rec.getData().flatten(), 2);
-            os.write(recData.flatten());
+            recData.setBytes(rec.getData().toBytes(), 2);
+            os.write(recData.toBytes());
         }
 
         // flatten packet header and append records
@@ -43,7 +43,7 @@ public class PacketOutputStream extends BufferedOutputStream {
         packetData.setWord(packet.getTarget(), 3);
         packetData.setBytes(os.toByteArray(), 4);
 
-        out.write(packetData.flatten());
+        out.write(packetData.toBytes());
         out.flush();
     }
 }

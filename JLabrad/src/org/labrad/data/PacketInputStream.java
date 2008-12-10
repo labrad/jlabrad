@@ -25,7 +25,7 @@ public class PacketInputStream extends FilterInputStream {
         int request;
 
         byte[] hdr = readBytes(20);
-        Data hdrdata = Data.unflatten(hdr, Type.HEADER_TYPE);
+        Data hdrdata = Data.fromBytes(hdr, Type.HEADER_TYPE);
         ctxHigh = hdrdata.get(0).getWord();
         ctxLow = hdrdata.get(1).getWord();
         request = hdrdata.get(2).getInt();
@@ -36,11 +36,11 @@ public class PacketInputStream extends FilterInputStream {
         ByteArrayInputStream is = new ByteArrayInputStream(recbuf);
         List<Record> records = new ArrayList<Record>();
         while (is.available() > 0) {
-            Data recdata = Data.unflatten(is, Type.RECORD_TYPE);
+            Data recdata = Data.fromBytes(is, Type.RECORD_TYPE);
             long ID = recdata.get(0).getWord();
             String tag = recdata.get(1).getString();
             byte[] data = recdata.get(2).getBytes();
-            records.add(new Record(ID, Data.unflatten(data, tag)));
+            records.add(new Record(ID, Data.fromBytes(data, Type.fromTag(tag))));
         }
         return new Packet(new Context(ctxHigh, ctxLow), source, request, records);
     }

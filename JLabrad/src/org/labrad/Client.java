@@ -570,10 +570,6 @@ public class Client {
     	Data data = new Data("w*s");
     	data.get(0).setWord(serverID);
     	data.get(1).setStringList(settings);
-    	//data.setArraySize(settings.size(), 1);
-    	//for (int i = 0; i < settings.size(); i++) {
-    	//    data.setString(settings.get(i), 1, i);
-    	//}
     	Request request = new Request(Constants.MANAGER);
     	request.add(Constants.LOOKUP, data);
     	ConcurrentMap<String, Long> cache = settingCache.get(serverID);

@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -37,10 +38,20 @@ public class Data {
     private int ofs;
     private List<byte[]> heap;
 
-    public static Data of(Data... elements) {
+    /**
+     * Build a cluster from an array of other data objects.
+     * @param elements
+     * @return
+     */
+    public static Data of(Data...elements) {
     	return Data.of(Arrays.asList(elements));
     }
     
+    /**
+     * Build a cluster from a list of other data objects.
+     * @param elements
+     * @return
+     */
     public static Data of(List<Data> elements) {
     	List<Type> elementTypes = new ArrayList<Type>();
     	for (Data elem : elements) {
@@ -51,6 +62,27 @@ public class Data {
     		cluster.get(i).set(elements.get(i));
     	}
     	return cluster;
+    }
+    
+    // static constructors for basic types
+    public static Data valueOf(boolean b) { return new Data("b").setBool(b); }
+    public static Data valueOf(int i) { return new Data("i").setInt(i); }
+    public static Data valueOf(long w) { return new Data("w").setWord(w); }
+    public static Data valueOf(String s) { return new Data("s").setString(s); }
+    public static Data valueOf(Date t) { return new Data("t").setTime(t); }
+    
+    public static Data valueOf(double v) {
+    	return new Data("v").setValue(v);
+    }
+    public static Data valueOf(double v, String units) {
+    	return new Data("v[" + units + "]").setValue(v);
+    }
+    
+    public static Data valueOf(double re, double im) {
+    	return new Data("c").setComplex(re, im);
+    }
+    public static Data valueOf(double re, double im, String units) {
+    	return new Data("c[" + units + "]").setComplex(re, im);
     }
     
     /**
@@ -71,9 +103,9 @@ public class Data {
      */
     public Data(Type type) {
         this.type = type;
-        data = getFilledByteArray(type.dataWidth());
+        data = createFilledByteArray(type.dataWidth());
         ofs = 0;
-        heap = new ArrayList<byte[]>();
+        heap = createHeap(type);
     }
     
     /**
@@ -101,13 +133,33 @@ public class Data {
 
     /**
      * Creates a byte array of the specified length filled with 0xff.
+     * This is used to mark pointers into the heap so we know when we can
+     * reuse heap addresses.  By initializing the byte array with 0xff,
+     * all heap addresses will initially be set to -1, which is never
+     * a valied heap index.
      * @param length of byte array to create
      * @return array of bytes initialized with 0xff
      */
-    private static byte[] getFilledByteArray(int length) {
+    private static byte[] createFilledByteArray(int length) {
     	byte[] data = new byte[length];
     	Arrays.fill(data, (byte) 0xff);
     	return data;
+    }
+    
+    /**
+     * Create a new heap object for data of the given type.  If the type in
+     * question is fixed width, then no heap is needed, so we use an empty list.
+     * @param type
+     * @return
+     */
+    private static List<byte[]> createHeap(Type type) {
+    	List<byte[]> heap;
+    	if (type.isFixedWidth()) {
+    		heap = Collections.emptyList();
+    	} else {
+    		heap = new ArrayList<byte[]>();
+    	}
+    	return heap;
     }
     
     /**
@@ -131,9 +183,9 @@ public class Data {
     /**
      * Flatten LabRAD data into an array of bytes, suitable for sending over the wire.
      */
-    public byte[] flatten() throws IOException {
+    public byte[] toBytes() throws IOException {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
-        flatten(os, type, data, ofs, heap);
+        toBytes(os, type, data, ofs, heap);
         return os.toByteArray();
     }
 
@@ -145,21 +197,21 @@ public class Data {
      * bytes are to be interpreted.
      * 
      * @param os
-     * @param type
+     * @param type 
      * @param buf
      * @param ofs
      * @param heap
-     * @throws IOException
+     * @throws IOException if writing to the output stream fails
      */
-    private void flatten(ByteArrayOutputStream os, Type type,
-    		             byte[] buf, int ofs, List<byte[]> heap) throws IOException {
+    private static void toBytes(ByteArrayOutputStream os, Type type,
+    		                    byte[] buf, int ofs, List<byte[]> heap) throws IOException {
         if (type.isFixedWidth()) {
         	os.write(buf, ofs, type.dataWidth());
         } else {
 	    	switch (type.getCode()) {
 	            case STR:
-	                byte[] sbuf = heap.get(ByteManip.getInt(buf, ofs));
-	                ByteManip.writeInt(os, sbuf.length);
+	                byte[] sbuf = heap.get(Bytes.getInt(buf, ofs));
+	                Bytes.writeInt(os, sbuf.length);
 	                os.write(sbuf);
 	                break;
 	
@@ -169,54 +221,39 @@ public class Data {
 	                // compute total number of elements in the list
 	                int size = 1;
 	                for (int i = 0; i < depth; i++) {
-	                    size *= ByteManip.getInt(buf, ofs + 4 * i);
+	                    size *= Bytes.getInt(buf, ofs + 4 * i);
 	                }
 	                // write the list shape
 	                os.write(buf, ofs, 4 * depth);
 	                // write the list data
-	                byte[] lbuf = heap.get(ByteManip.getInt(buf, ofs + 4 * depth));
+	                byte[] lbuf = heap.get(Bytes.getInt(buf, ofs + 4 * depth));
 	                if (elementType.isFixedWidth()) {
 	                	// for fixed-width data, just copy in one big chunk
 	                	os.write(lbuf, 0, elementType.dataWidth() * size);
 	                } else {
 	                	// for variable-width data, flatten recursively
+	                	int width = elementType.dataWidth();
 		                for (int i = 0; i < size; i++) {
-		                    flatten(os, elementType, lbuf, elementType.dataWidth() * i,
-		                            heap);
+		                    toBytes(os, elementType, lbuf, width * i, heap);
 		                }
 	                }
 	                break;
 	
 	            case CLUSTER:
 	            	for (int i = 0; i < type.size(); i++) {
-		                flatten(os, type.getSubtype(i), buf,
-		                        ofs + type.getOffset(i), heap);
+		                toBytes(os, type.getSubtype(i), buf, ofs + type.getOffset(i), heap);
 		            }
 	                break;
 	
 	            case ERROR:
 	                String tag = "is" + type.getSubtype(0).toString();
-	                flatten(os, Type.fromTag(tag), buf, ofs, heap);
+	                toBytes(os, Type.fromTag(tag), buf, ofs, heap);
 	                break;
 	
 	            default:
 	                throw new RuntimeException("Unknown type.");
 	        }
         }
-    }
-
-    /**
-     * Unflatten bytes from the specified buffer into Data, according to the tag.
-     * 
-     * @param buf
-     * @param tag
-     * @return
-     * @throws IOException
-     */
-    public static Data unflatten(byte[] buf, String tag) throws IOException {
-        ByteArrayInputStream is = new ByteArrayInputStream(buf);
-        Type type = Type.fromTag(tag);
-        return unflatten(is, type);
     }
 
     /**
@@ -227,41 +264,25 @@ public class Data {
      * @return
      * @throws IOException
      */
-    public static Data unflatten(byte[] buf, Type type) throws IOException {
-        ByteArrayInputStream is = new ByteArrayInputStream(buf);
-        return unflatten(is, type);
+    public static Data fromBytes(byte[] buf, Type type) throws IOException {
+        return fromBytes(new ByteArrayInputStream(buf), type);
     }
 
     /**
-     * Unflatten from an input stream of bytes, according to the tag.
-     * 
-     * @param is
-     * @param tag
-     * @return
-     * @throws IOException
-     */
-    public static Data unflatten(ByteArrayInputStream is, String tag)
-            throws IOException {
-        Type type = Type.fromTag(tag);
-        return unflatten(is, type);
-    }
-
-    /**
-     * Unflatten from an input stream of bytes, according to Type.
+     * Unflatten a Data object from the given input stream of bytes.
      * 
      * @param is
      * @param type
      * @return
      * @throws IOException
      */
-    public static Data unflatten(ByteArrayInputStream is, Type type)
-            throws IOException {
+    public static Data fromBytes(ByteArrayInputStream is, Type type) throws IOException {
     	byte[] data = new byte[type.dataWidth()];
-        List<byte[]> heap = new ArrayList<byte[]>();
-        unflatten(is, type, data, 0, heap);
+        List<byte[]> heap = createHeap(type);
+        fromBytes(is, type, data, 0, heap);
         return new Data(type, data, 0, heap);
     }
-
+    
     /**
      * Unflatten from a stream of bytes according to type, into the middle
      * of a Data object, as specified by the byte buffer, offset, and heap.
@@ -273,16 +294,16 @@ public class Data {
      * @param heap
      * @throws IOException
      */
-    private static void unflatten(ByteArrayInputStream is, Type type,
-            byte[] buf, int ofs, List<byte[]> heap) throws IOException {
+    private static void fromBytes(ByteArrayInputStream is,
+    		Type type, byte[] buf, int ofs, List<byte[]> heap) throws IOException {
     	if (type.isFixedWidth()) {
     		is.read(buf, ofs, type.dataWidth());
     	} else {
 	        switch (type.getCode()) {
 	            case STR:
-	                int len = ByteManip.readInt(is);
+	                int len = Bytes.readInt(is);
 	                byte[] sbuf = new byte[len];
-	                ByteManip.setInt(buf, ofs, heap.size());
+	                Bytes.setInt(buf, ofs, heap.size());
 	                heap.add(sbuf);
 	                is.read(sbuf, 0, len);
 	                break;
@@ -294,16 +315,16 @@ public class Data {
 	                is.read(buf, ofs, 4 * depth);
 	                int size = 1;
 	                for (int i = 0; i < depth; i++) {
-	                    size *= ByteManip.getInt(buf, ofs + 4 * i);
+	                    size *= Bytes.getInt(buf, ofs + 4 * i);
 	                }
 	                byte[] lbuf = new byte[elementWidth * size];
-	                ByteManip.setInt(buf, ofs + 4 * depth, heap.size());
+	                Bytes.setInt(buf, ofs + 4 * depth, heap.size());
 	                heap.add(lbuf);
 	                if (elementType.isFixedWidth()) {
 	                	is.read(lbuf, 0, elementWidth * size);
 	                } else {
 		                for (int i = 0; i < size; i++) {
-		                    unflatten(is, type.getSubtype(0), lbuf, elementWidth * i,
+		                    fromBytes(is, type.getSubtype(0), lbuf, elementWidth * i,
 		                            heap);
 		                }
 	                }
@@ -311,14 +332,14 @@ public class Data {
 	
 	            case CLUSTER:
             	    for (int i = 0; i < type.size(); i++) {
-	                    unflatten(is, type.getSubtype(i), buf,
+	                    fromBytes(is, type.getSubtype(i), buf,
 	                    		  ofs + type.getOffset(i), heap);
 	                }
 	            	break;
 	
 	            case ERROR:
 	                String tag = "is" + type.getSubtype(0).toString();
-	                unflatten(is, Type.fromTag(tag), buf, ofs, heap);
+	                fromBytes(is, Type.fromTag(tag), buf, ofs, heap);
 	                break;
 	
 	            default:
@@ -337,7 +358,7 @@ public class Data {
      * @return
      */
     public String pretty() {
-        String s = "", u = "";
+        String s = "", u;
         switch (type.getCode()) {
             case EMPTY: return "";
             case BOOL: return Boolean.toString(getBool());
@@ -351,11 +372,11 @@ public class Data {
             case COMPLEX:
                 Complex c = getComplex();
                 u = type.getUnits();
-                return Double.toString(c.real) + (c.imag >= 0 ? "+" : "") + 
-                       Double.toString(c.imag) + (u != null ? " [" + u + "]" : "");
+                return Double.toString(c.getReal()) + (c.getImag() >= 0 ? "+" : "") + 
+                       Double.toString(c.getImag()) + (u != null ? " [" + u + "]" : "");
 
             case TIME: return getTime().toString();
-            case STR: return "\"" + getString() + "\"";
+            case STR: return '"' + getString() + '"';
 
             case LIST:
                 int[] shape = getArrayShape();
@@ -363,7 +384,7 @@ public class Data {
                 return prettyList(shape, indices, 0);
 
             case CLUSTER:
-                for (int i = 0; i < getClusterSize(); i++) {
+            	for (int i = 0; i < getClusterSize(); i++) {
                     s += ", " + get(i).pretty();
                 }
                 return "(" + s.substring(2) + ")";
@@ -398,6 +419,18 @@ public class Data {
     }
     
     /**
+     * Checks that the type of this data object is compatible with the specified type.
+     * @param code
+     */
+    private void getSubtype(Type.Code code) {
+    	if (type.getCode() != code) {
+    		throw new RuntimeException(
+    				"Type mismatch: expecting " + code +
+    				" but found " + type.getCode() + " instead.");
+    	}
+    }
+    
+    /**
      * Extracts the subtype from this data object at the specified location.
      * Also checks that the type at this location is a subtype of the specified type.
      * 
@@ -405,7 +438,7 @@ public class Data {
      * @param indices
      * @return
      */
-    private Type getSubtype(Type.Code code, int... indices) {
+    private Type getSubtype(Type.Code code, int...indices) {
     	Type type = getSubtype(indices);
     	if (type.getCode() != code) {
     		throw new RuntimeException(
@@ -416,20 +449,12 @@ public class Data {
     	return type;
     }
     
-    private void getSubtype(Type.Code code) {
-    	if (type.getCode() != code) {
-    		throw new RuntimeException(
-    				"Type mismatch: expecting " + code +
-    				" but found " + type.getCode() + " instead.");
-    	}
-    }
-    
     /**
      * Extracts a subtype without typechecking.
      * @param indices
      * @return
      */
-    private Type getSubtype(int... indices) {
+    private Type getSubtype(int...indices) {
         Type type = this.type;
         int dimsLeft = 0;
         for (int i : indices) {
@@ -463,7 +488,7 @@ public class Data {
      * @param indices
      * @return
      */
-    private ByteArrayView getOffset(int... indices) {
+    private ByteArrayView getOffset(int...indices) {
         Type type = this.type;
         byte[] data = this.data;
         int depth = 0, dimsLeft = 0;
@@ -478,10 +503,10 @@ public class Data {
                         shape = new int[depth];
                         listIndices = new int[depth];
                         for (int j = 0; j < depth; j++) {
-                            shape[j] = ByteManip.getInt(data, ofs + 4 * j);
+                            shape[j] = Bytes.getInt(data, ofs + 4 * j);
                         }
                         dimsLeft = depth;
-                        data = heap.get(ByteManip.getInt(data, ofs + 4 * depth));
+                        data = heap.get(Bytes.getInt(data, ofs + 4 * depth));
                     }
                     // read one listIndex
                     listIndices[depth - dimsLeft] = i;
@@ -515,37 +540,85 @@ public class Data {
     }
 
     /**
-     * Get a Data view into a subobject at the given indices list.
+     * Get a Data subobject at the specified list of indices.  Note that
+     * this returns a view rather than a copy, so any modifications to
+     * the subobject will be reflected in the original data.
      * @param indices
      * @return
      */
     public Data get(List<Integer> indices) {
     	int[] indexArray = new int[indices.size()];
-    	for (int i = 0; i < indices.size(); i++) {
-    		indexArray[i] = indices.get(i);
-    	}
+    	int i = 0;
+    	for (int e : indices) indexArray[i++] = e;
     	return get(indexArray);
     }
     
     /**
-     * Get a Data view into a subobject at the given indices array.
+     * Get a Data subobject at the specified array of indices.  Note that
+     * this returns a view rather than a copy, so any modifications to
+     * the subobject will be reflected in the original data.
      * @param indices
      * @return
      */
-    public Data get(int... indices) {
+    public Data get(int...indices) {
         Type type = getSubtype(indices);
         ByteArrayView pos = getOffset(indices);
         return new Data(type, pos.getBytes(), pos.getOffset(), heap);
     }
-
+    
     /**
-     * Set this data object to be a copy of the given data object.
-     * @param data
+     * Set this data object based on the value of the other object.  In this case,
+     * to prevent strangeness with shared heaps, the other object is copied into
+     * this data object.
+     * @param other
      * @return
      */
-    public Data set(Data data) {
-    	// TODO: implement this!
-    	throw new RuntimeException("Not implemented!");
+    public Data set(Data other) {
+    	// TODO: first check that datatypes match, then use non-checking gets/sets
+    	// TODO: check units for Value and Complex
+    	switch (type.getCode()) {
+    		case BOOL: setBool(other.getBool()); break;
+    		case INT: setInt(other.getInt()); break;
+    		case WORD: setWord(other.getWord()); break;
+    		case VALUE: setValue(other.getValue()); break;
+    		case COMPLEX: setComplex(other.getComplex()); break;
+    		case TIME: setTime(other.getTime()); break;
+    		case STR: setBytes(other.getBytes()); break;
+    		case LIST:
+    			int[] shape = other.getArrayShape();
+    			int[] indices = new int[shape.length];
+    			setArrayShape(shape);
+    			copyList(other, shape, indices, 0);
+    			break;
+    			
+    		case CLUSTER:
+    			for (int i = 0; i < other.getClusterSize(); i++) {
+    				get(i).set(other.get(i));
+    			}
+    			break;
+    			
+    		default:
+    	    	throw new RuntimeException("Not implemented!");
+    	}
+    	return this;
+    }
+    
+    /**
+     * Copy a (possibly multidimensional) list from another Data object to this one.
+     * @param other
+     * @param shape
+     * @param indices
+     * @param level
+     */
+    private void copyList(Data other, int[] shape, int[] indices, int level) {
+        for (int i = 0; i < shape[level]; i++) {
+            indices[level] = i;
+            if (level == shape.length - 1) {
+                get(indices).set(other.get(indices));
+            } else {
+            	copyList(other, shape, indices, level + 1);
+            }
+        }
     }
     
     // type checks
@@ -568,37 +641,37 @@ public class Data {
     }
 	
 	// indexed type checks
-//	public boolean isBool(int... indices) { return get(indices).isBool(); }
-//    public boolean isInt(int... indices) { return get(indices).isInt(); }
-//	public boolean isWord(int... indices) { return get(indices).isWord(); }
-//	public boolean isBytes(int... indices) { return get(indices).isBool(); }
-//	public boolean isString(int... indices) { return get(indices).isString(); }
-//	public boolean isValue(int... indices) { return get(indices).isValue(); }
-//	public boolean isComplex(int... indices) { return get(indices).isComplex(); }
-//	public boolean isTime(int... indices) { return get(indices).isTime(); }
-//	public boolean isArray(int... indices) { return get(indices).isArray(); }
-//	public boolean isCluster(int... indices) { return get(indices).isCluster(); }
-//	public boolean hasUnits(int... indices) { return get(indices).hasUnits(); }
+//    public boolean isBool(int...indices) { return get(indices).isBool(); }
+//    public boolean isInt(int...indices) { return get(indices).isInt(); }
+//    public boolean isWord(int...indices) { return get(indices).isWord(); }
+//    public boolean isBytes(int...indices) { return get(indices).isBool(); }
+//    public boolean isString(int...indices) { return get(indices).isString(); }
+//    public boolean isValue(int...indices) { return get(indices).isValue(); }
+//    public boolean isComplex(int...indices) { return get(indices).isComplex(); }
+//    public boolean isTime(int...indices) { return get(indices).isTime(); }
+//    public boolean isArray(int...indices) { return get(indices).isArray(); }
+//    public boolean isCluster(int...indices) { return get(indices).isCluster(); }
+//    public boolean hasUnits(int...indices) { return get(indices).hasUnits(); }
 	
 	// getters
 	public boolean getBool() {
     	getSubtype(Type.Code.BOOL);
-    	return ByteManip.getBool(getOffset());
+    	return Bytes.getBool(getOffset());
     }
     
     public int getInt() {
 		getSubtype(Type.Code.INT);
-	    return ByteManip.getInt(getOffset());
+	    return Bytes.getInt(getOffset());
 	}
 
 	public long getWord() {
 		getSubtype(Type.Code.WORD);
-	    return ByteManip.getWord(getOffset());
+	    return Bytes.getWord(getOffset());
 	}
 
 	public byte[] getBytes() {
 		getSubtype(Type.Code.STR);
-	    return heap.get(ByteManip.getInt(getOffset()));
+	    return heap.get(Bytes.getInt(getOffset()));
 	}
 
 	public String getString() {
@@ -615,12 +688,12 @@ public class Data {
 	
 	public double getValue() {
 		getSubtype(Type.Code.VALUE);
-	    return ByteManip.getDouble(getOffset());
+	    return Bytes.getDouble(getOffset());
 	}
 	
 	public Complex getComplex() {
 		getSubtype(Type.Code.COMPLEX);
-	    return ByteManip.getComplex(getOffset());
+	    return Bytes.getComplex(getOffset());
 	}
 
 	public String getUnits() {
@@ -630,8 +703,8 @@ public class Data {
 	public Date getTime() {
 		getSubtype(Type.Code.TIME);
 		ByteArrayView ofs = getOffset();
-		long seconds = ByteManip.getLong(ofs.getBytes(), ofs.getOffset());
-		long fraction = ByteManip.getLong(ofs.getBytes(), ofs.getOffset() + 8);
+		long seconds = Bytes.getLong(ofs.getBytes(), ofs.getOffset());
+		long fraction = Bytes.getLong(ofs.getBytes(), ofs.getOffset() + 8);
 		seconds -= deltaSeconds;
 		fraction = (long)(((double) fraction) / Long.MAX_VALUE * 1000);
 	    return new Date(seconds * 1000 + fraction);
@@ -651,7 +724,7 @@ public class Data {
 	    int[] shape = new int[depth];
 	    ByteArrayView pos = getOffset();
 	    for (int i = 0; i < depth; i++) {
-	        shape[i] = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4*i);
+	        shape[i] = Bytes.getInt(pos.getBytes(), pos.getOffset() + 4*i);
 	    }
 	    return shape;
 	}
@@ -663,13 +736,13 @@ public class Data {
 
 	public int getErrorCode() {
 		getSubtype(Type.Code.ERROR);
-	    return ByteManip.getInt(getOffset());
+	    return Bytes.getInt(getOffset());
 	}
 
 	public String getErrorMessage() {
 		getSubtype(Type.Code.ERROR);
 	    ByteArrayView pos = getOffset();
-	    int index = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4);
+	    int index = Bytes.getInt(pos.getBytes(), pos.getOffset() + 4);
 	    try {
 	        return new String(heap.get(index), STRING_ENCODING);
 	    } catch (UnsupportedEncodingException e) {
@@ -686,50 +759,51 @@ public class Data {
 
 	
 	// indexed getters
-//	public boolean getBool(int... indices) { return get(indices).getBool(); }
-//    public int getInt(int... indices) { return get(indices).getInt(); }
-//	public long getWord(int... indices) { return get(indices).getWord(); }
-//	public byte[] getBytes(int... indices) { return get(indices).getBytes(); }
-//	public String getString(int... indices) { return get(indices).getString(); }
-//	public String getString(String encoding, int... indices) throws UnsupportedEncodingException {
-//		return get(indices).getString(encoding);
-//	}
-//	public double getValue(int... indices) { return get(indices).getValue(); }
-//	public Complex getComplex(int... indices) { return get(indices).getComplex(); }
-//	public String getUnits(int... indices) { return getSubtype(indices).getUnits(); }
-//	public Date getTime(int... indices) { return get(indices).getTime(); }
-//	public int getArraySize(int... indices) { return get(indices).getArraySize(); }
-//	public int[] getArrayShape(int... indices) { return get(indices).getArrayShape(); }
-//	public int getClusterSize(int... indices) {
-//	    return getSubtype(Type.Code.CLUSTER, indices).size();
-//	}
+//    public boolean getBool(int...indices) { return get(indices).getBool(); }
+//    public int getInt(int...indices) { return get(indices).getInt(); }
+//    public long getWord(int...indices) { return get(indices).getWord(); }
+//    public byte[] getBytes(int...indices) { return get(indices).getBytes(); }
+//    public String getString(int...indices) { return get(indices).getString(); }
+//    public String getString(String encoding, int...indices)
+//            throws UnsupportedEncodingException {
+//        return get(indices).getString(encoding);
+//    }
+//    public double getValue(int...indices) { return get(indices).getValue(); }
+//    public Complex getComplex(int...indices) { return get(indices).getComplex(); }
+//    public String getUnits(int...indices) { return getSubtype(indices).getUnits(); }
+//    public Date getTime(int...indices) { return get(indices).getTime(); }
+//    public int getArraySize(int...indices) { return get(indices).getArraySize(); }
+//    public int[] getArrayShape(int...indices) { return get(indices).getArrayShape(); }
+//    public int getClusterSize(int...indices) {
+//        return getSubtype(Type.Code.CLUSTER, indices).size();
+//    }
 
 	// setters
 	public Data setBool(boolean data) {
     	getSubtype(Type.Code.BOOL);
-        ByteManip.setBool(getOffset(), data);
+        Bytes.setBool(getOffset(), data);
         return this;
     }
     
     public Data setInt(int data) {
 		getSubtype(Type.Code.INT);
-	    ByteManip.setInt(getOffset(), data);
+	    Bytes.setInt(getOffset(), data);
 	    return this;
 	}
 
 	public Data setWord(long data) {
 		getSubtype(Type.Code.WORD);
-	    ByteManip.setWord(getOffset(), data);
+	    Bytes.setWord(getOffset(), data);
 	    return this;
 	}
 
 	public Data setBytes(byte[] data) {
 		getSubtype(Type.Code.STR);
 		ByteArrayView ofs = getOffset();
-		int heapLocation = ByteManip.getInt(ofs);
+		int heapLocation = Bytes.getInt(ofs);
 		if (heapLocation == -1) {
 			// not yet set in the heap
-			ByteManip.setInt(ofs, heap.size());
+			Bytes.setInt(ofs, heap.size());
 			heap.add(data);
 		} else {
 			// already set in the heap, reuse old spot
@@ -754,13 +828,13 @@ public class Data {
 	
 	public Data setValue(double data) {
 		getSubtype(Type.Code.VALUE);
-	    ByteManip.setDouble(getOffset(), data);
+	    Bytes.setDouble(getOffset(), data);
 	    return this;
 	}
 
 	public Data setComplex(Complex data) {
 		getSubtype(Type.Code.COMPLEX);
-	    ByteManip.setComplex(getOffset(), data);
+	    Bytes.setComplex(getOffset(), data);
 	    return this;
 	}
 
@@ -775,8 +849,8 @@ public class Data {
 		long fraction = millis % 1000;
 		fraction = (long)(((double) fraction) / 1000 * Long.MAX_VALUE);
 		ByteArrayView ofs = getOffset();
-		ByteManip.setLong(ofs.getBytes(), ofs.getOffset(), seconds);
-		ByteManip.setLong(ofs.getBytes(), ofs.getOffset() + 8, fraction);
+		Bytes.setLong(ofs.getBytes(), ofs.getOffset(), seconds);
+		Bytes.setLong(ofs.getBytes(), ofs.getOffset() + 8, fraction);
 	    return this;
 	}
 	
@@ -793,7 +867,7 @@ public class Data {
 		return setArrayShape(shapeArray);
 	}
 	
-	public Data setArrayShape(int... shape) {
+	public Data setArrayShape(int...shape) {
 	    getSubtype(Type.Code.LIST);
 	    Type elementType = type.getSubtype(0);
 	    int depth = type.getDepth();
@@ -803,13 +877,13 @@ public class Data {
 	    ByteArrayView pos = getOffset();
 	    int size = 1;
 	    for (int i = 0; i < depth; i++) {
-	        ByteManip.setInt(pos.getBytes(), pos.getOffset() + 4*i, shape[i]);
+	        Bytes.setInt(pos.getBytes(), pos.getOffset() + 4*i, shape[i]);
 	        size *= shape[i];
 	    }
-	    byte[] buf = getFilledByteArray(elementType.dataWidth() * size);
-	    int heapIndex = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4*depth);
+	    byte[] buf = createFilledByteArray(elementType.dataWidth() * size);
+	    int heapIndex = Bytes.getInt(pos.getBytes(), pos.getOffset() + 4*depth);
 	    if (heapIndex == -1) {
-	    	ByteManip.setInt(pos.getBytes(), pos.getOffset() + 4*depth, heap.size());
+	    	Bytes.setInt(pos.getBytes(), pos.getOffset() + 4*depth, heap.size());
 	    	heap.add(buf);
 	    } else {
 	    	heap.set(heapIndex, buf);
@@ -820,12 +894,12 @@ public class Data {
 	public Data setError(int code, String message) {
 		getSubtype(Type.Code.ERROR);
 	    ByteArrayView pos = getOffset();
-	    ByteManip.setInt(pos.getBytes(), pos.getOffset(), code);
+	    Bytes.setInt(pos.getBytes(), pos.getOffset(), code);
 	    try {
 	    	byte[] buf = message.getBytes(STRING_ENCODING);
-	    	int heapIndex = ByteManip.getInt(pos.getBytes(), pos.getOffset() + 4);
+	    	int heapIndex = Bytes.getInt(pos.getBytes(), pos.getOffset() + 4);
 	        if (heapIndex == -1) {
-	        	ByteManip.setInt(pos.getBytes(), pos.getOffset()+4, heap.size());
+	        	Bytes.setInt(pos.getBytes(), pos.getOffset()+4, heap.size());
 	        	heap.add(buf);
 	        } else {
 	        	heap.set(heapIndex, buf);
@@ -838,67 +912,67 @@ public class Data {
 
 	
 	// indexed setters
-	public Data setBool(boolean data, int... indices) {
+	public Data setBool(boolean data, int...indices) {
     	get(indices).setBool(data);
     	return this;
     }
 
-    public Data setInt(int data, int... indices) {
+    public Data setInt(int data, int...indices) {
     	get(indices).setInt(data);
     	return this;
     }
     
-    public Data setWord(long data, int... indices) {
+    public Data setWord(long data, int...indices) {
     	get(indices).setWord(data);
     	return this;
     }
     
-    public Data setBytes(byte[] data, int... indices) {
+    public Data setBytes(byte[] data, int...indices) {
 		get(indices).setBytes(data);
 	    return this;
 	}
 
-	public Data setString(String data, int... indices) {
+	public Data setString(String data, int...indices) {
 		get(indices).setString(data);
 	    return this;
 	}
 
-	public Data setString(String data, String encoding, int... indices)
+	public Data setString(String data, String encoding, int...indices)
 			throws UnsupportedEncodingException {
 		get(indices).setString(data, encoding);
 		return this;
 	}
 
-	public Data setValue(double data, int... indices) {
+	public Data setValue(double data, int...indices) {
 		get(indices).setValue(data);
 		return this;
 	}
 
-	public Data setComplex(Complex data, int... indices) {
+	public Data setComplex(Complex data, int...indices) {
 		get(indices).setComplex(data);
 	    return this;
 	}
 
-	public Data setComplex(double re, double im, int... indices) {
+	public Data setComplex(double re, double im, int...indices) {
 		return setComplex(new Complex(re, im), indices);
 	}
 
-	public Data setTime(Date date, int... indices) {
+	public Data setTime(Date date, int...indices) {
 		get(indices).setTime(date);
 	    return this;
 	}
 
-	public Data setArraySize(int size, int... indices) {
+	public Data setArraySize(int size, int...indices) {
 		get(indices).setArraySize(size);
 	    return this;
 	}
 
-	public Data setArrayShape(int[] shape, int... indices) {
+	public Data setArrayShape(int[] shape, int...indices) {
 		get(indices).setArrayShape(shape);
 	    return this;
 	}
 	
-	public Data setArrayShape(List<Integer> shape, int... indices) {
+	public Data setArrayShape(List<Integer> shape, int...indices) {
 		get(indices).setArrayShape(shape);
 	    return this;
 	}
@@ -928,11 +1002,24 @@ public class Data {
 	private static Getter<String> stringGetter = new Getter<String>() {
 		public String get(Data data) { return data.getString(); }
 	};
+	private static Getter<Date> dateGetter = new Getter<Date>() {
+		public Date get(Data data) { return data.getTime(); }
+	};
+	private static Getter<Double> valueGetter = new Getter<Double>() {
+		public Double get(Data data) { return data.getValue(); }
+	};
+	private static Getter<Complex> complexGetter = new Getter<Complex>() {
+		public Complex get(Data data) { return data.getComplex(); }
+	};
 	
 	public List<Boolean> getBoolList() { return getList(Type.Code.BOOL, boolGetter); }
 	public List<Integer> getIntList() { return getList(Type.Code.INT, intGetter); }
 	public List<Long> getWordList() { return getList(Type.Code.WORD, wordGetter); }
 	public List<String> getStringList() { return getList(Type.Code.STR, stringGetter); }
+	public List<Date> getDateList() { return getList(Type.Code.TIME, dateGetter); }
+	public List<Double> getDoubleList() { return getList(Type.Code.VALUE, valueGetter); }
+	public List<Complex> getComplexList() { return getList(Type.Code.COMPLEX, complexGetter); }
+	
 	
 	// vectorized indexed getters
 //	public List<Boolean> getBoolList(int...indices) { return get(indices).getBoolList(); }
@@ -965,90 +1052,56 @@ public class Data {
 	private static Setter<String> stringSetter = new Setter<String>() {
 		public void set(Data data, String value) { data.setString(value); }
 	};
+	private static Setter<Date> dateSetter = new Setter<Date>() {
+		public void set(Data data, Date value) { data.setTime(value); }
+	};
+	private static Setter<Double> valueSetter = new Setter<Double>() {
+		public void set(Data data, Double value) { data.setValue(value); }
+	};
+	private static Setter<Complex> complexSetter = new Setter<Complex>() {
+		public void set(Data data, Complex value) { data.setComplex(value); }
+	};
 	
 	
 	public Data setBoolList(List<Boolean> data) { return setList(data, Type.Code.BOOL, boolSetter); }
 	public Data setIntList(List<Integer> data) { return setList(data, Type.Code.INT, intSetter); }
 	public Data setWordList(List<Long> data) { return setList(data, Type.Code.WORD, wordSetter); }
     public Data setStringList(List<String> data) { return setList(data, Type.Code.STR, stringSetter); }
+    public Data setDateList(List<Date> data) { return setList(data, Type.Code.TIME, dateSetter); }
+    public Data setDoubleList(List<Double> data) { return setList(data, Type.Code.VALUE, valueSetter); }
+    public Data setComplexList(List<Complex> data) { return setList(data, Type.Code.COMPLEX, complexSetter); }
+    
     
     // vectorized indexed setters
-    public Data setBoolList(List<Boolean> data, int... indices) {
+    public Data setBoolList(List<Boolean> data, int...indices) {
     	get(indices).setBoolList(data);
     	return this;
     }
     
-    public Data setIntList(List<Integer> data, int... indices) {
+    public Data setIntList(List<Integer> data, int...indices) {
     	get(indices).setIntList(data);
     	return this;
     }
     
-    public Data setWordList(List<Long> data, int... indices) {
+    public Data setWordList(List<Long> data, int...indices) {
     	get(indices).setWordList(data);
     	return this;
     }
     
-    public Data setStringList(List<String> strings, int... indices) {
-    	return get(indices).setStringList(strings);
+    public Data setStringList(List<String> strings, int...indices) {
+    	get(indices).setStringList(strings);
+    	return this;
     }
     
     
     
     // some basic tests of the data object
     public static void main(String[] args) throws IOException {
-        byte[] bs = new byte[100];
         Random rand = new Random();
-        int count;
-        
         boolean b;
-        for (count = 0; count < 1000; count++) {
-            b = rand.nextBoolean();
-            ByteManip.setBool(bs, 0, b);
-            assert b == ByteManip.getBool(bs, 0);
-        }
-        System.out.println("Bool okay.");
-
-        int i;
-        for (count = 0; count < 1000000; count++) {
-            i = rand.nextInt();
-            ByteManip.setInt(bs, 0, i);
-            assert i == ByteManip.getInt(bs, 0);
-        }
-        System.out.println("Int okay.");
-
+        int i, count;
         long l;
-        for (count = 0; count < 1000000; count++) {
-            l = Math.abs(rand.nextLong()) % 4294967296L;
-            ByteManip.setWord(bs, 0, l);
-            assert l == ByteManip.getWord(bs, 0);
-        }
-        System.out.println("Word okay.");
-
-        for (count = 0; count < 1000000; count++) {
-            l = rand.nextLong();
-            ByteManip.setLong(bs, 0, l);
-            assert l == ByteManip.getLong(bs, 0);
-        }
-        System.out.println("Long okay.");
-
-        double d;
-        for (count = 0; count < 100000; count++) {
-            d = rand.nextGaussian();
-            ByteManip.setDouble(bs, 0, d);
-            assert d == ByteManip.getDouble(bs, 0);
-        }
-        System.out.println("Double okay.");
-
-        double re, im;
-        for (count = 0; count < 100000; count++) {
-            re = rand.nextGaussian();
-            im = rand.nextGaussian();
-            Complex c1 = new Complex(re, im);
-            ByteManip.setComplex(bs, 0, c1);
-            Complex c2 = ByteManip.getComplex(bs, 0);
-            assert (c1.real == c2.real) && (c1.imag == c2.imag);
-        }
-        System.out.println("Complex okay.");
+        double d, re, im;
         
         Data d1, d2;
         byte[] flat;
@@ -1101,8 +1154,8 @@ public class Data {
         assert s.equals(d1.get(3).getString());
         assert d == d1.get(4).getValue();
         Complex c = d1.get(5).getComplex();
-        assert re == c.real;
-        assert im == c.imag;
+        assert re == c.getReal();
+        assert im == c.getImag();
         System.out.println("Cluster okay.");
         System.out.println(d1.pretty());
 
@@ -1130,14 +1183,14 @@ public class Data {
             assert s.equals(d1.get(count, 3).getString());
             assert d == d1.get(count, 4).getValue();
             c = d1.get(count, 5).getComplex();
-            assert re == c.real;
-            assert im == c.imag;
+            assert re == c.getReal();
+            assert im == c.getImag();
         }
         System.out.println("List of Cluster okay.");
         System.out.println(d1.pretty());
 
-        flat = d1.flatten();
-        d2 = unflatten(flat, "*(biwsv[m]c[m/s])");
+        flat = d1.toBytes();
+        d2 = fromBytes(flat, Type.fromTag("*(biwsv[m]c[m/s])"));
         System.out.println(d2.pretty());
 
         // test multi-dimensional list
@@ -1149,8 +1202,8 @@ public class Data {
             }
         }
         System.out.println(d1.pretty());
-        flat = d1.flatten();
-        d2 = unflatten(flat, "*2i");
+        flat = d1.toBytes();
+        d2 = fromBytes(flat, Type.fromTag("*2i"));
         System.out.println(d2.pretty());
 
         d1 = new Data("*3s");
@@ -1163,8 +1216,8 @@ public class Data {
             }
         }
         System.out.println(d1.pretty());
-        flat = d1.flatten();
-        d2 = unflatten(flat, "*3s");
+        flat = d1.toBytes();
+        d2 = fromBytes(flat, Type.fromTag("*3s"));
         System.out.println(d2.pretty());
 
         System.out.println("done.");

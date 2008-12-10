@@ -12,6 +12,7 @@ Data
 - methods for quick creation of basic data types
 - method to copy (clone?) a Data object
 - method to construct a cluster from a bunch of other data objects (by copying them?)
+- add get* and set* methods that do not check types for use with vectorization
 
 Server
 - create annotations to mark server methods
