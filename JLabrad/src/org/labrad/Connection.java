@@ -1,6 +1,7 @@
 package org.labrad;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;
@@ -32,15 +33,64 @@ import org.labrad.data.Request;
 import org.labrad.errors.IncorrectPasswordException;
 import org.labrad.errors.LabradException;
 
-public class Client {
+public class Connection implements Serializable {
+	/** Version for serialization. */
+	private static final long serialVersionUID = 1L;
+
 	private static final String DEFAULT_NAME = "Java Client";
     
+	// properties
     private String host;
     private int port;
+    private String password;
     private long ID;
     private String loginMessage;
     private boolean connected = false;
 
+    /**
+	 * @return the host
+	 */
+	public String getHost() { return host; }
+    public void setHost(String host) {
+    	this.host = host;
+    }
+
+	/**
+	 * @return the port
+	 */
+	public int getPort() { return port; }
+	public void setPort(int port) {
+		this.port = port;
+	}
+
+	
+	public void setPassword(String password) {
+		this.password = password;
+	}
+	
+
+	/**
+	 * @return the iD
+	 */
+	public long getID() {
+		return ID;
+	}
+	
+	/**
+	 * Get the welcome message returned by the manager when we connected.
+	 * @return
+	 */
+	public String getLoginMessage() { return loginMessage; }
+    
+	public boolean isConnected() {
+		return connected;
+	}
+	private void setConnected(boolean connected) {
+		this.connected = connected;
+	}
+	
+	
+	// networking stuff
     private Socket socket;
     private Thread reader, writer;
     private PacketInputStream inputStream;
@@ -70,12 +120,12 @@ public class Client {
     private ConcurrentMap<Long, ConcurrentMap<String, Long>> settingCache =
     	new ConcurrentHashMap<Long, ConcurrentMap<String, Long>>();
     
-    private enum RequestStatus { PENDING, DONE, FAILED, CANCELLED; }
-    
     /**
      * Represents a pending LabRAD request.
      */
-    private class RequestReceiver implements Future<List<Data>> {
+    private static class RequestReceiver implements Future<List<Data>> {
+    	private enum RequestStatus { PENDING, DONE, FAILED, CANCELLED; }
+    	
     	private RequestStatus status = RequestStatus.PENDING;
     	private List<Data> response;
     	private Throwable cause;
@@ -161,69 +211,33 @@ public class Client {
 			notifyAll();
 		}
     }
-
-    /**
-     * Thread that writes queued packets to the output stream.
-     * @author maffoo
-     *
-     */
-    class Writer extends Thread {
-        Writer() { super("Packet Writer thread"); }
-        public void run() {
-            try {
-                while (true) {
-                    Packet p = writeQueue.take();
-                    outputStream.writePacket(p);
-                }
-            } catch (InterruptedException e) {
-            	// this happens when the connection is closed.
-            } catch (IOException e) {
-            	// let the client know that we have disconnected.
-            	close(e);
-            }
-        }
-    }
-
-    /**
-     * Thread that reads packets coming in on an input stream.
-     * @author maffoo
-     *
-     */
-    class Reader extends Thread {
-        Reader() { super("Packet Reader thread"); }
-        public void run() {
-            try {
-                while (!Thread.interrupted()) {
-                    handleResponse(inputStream.readPacket());
-                }
-            } catch (IOException e) {
-            	// let the client know that we have disconnected.
-            	if (!Thread.interrupted()) {
-            		close(e);
-            	}
-            }
-        }
-    }
-    
     
     /**
-     * Create a new client connection to a LabRAD manager at the given host and port.
-     * @param host
-     * @param port
-     * @param password
+     * Create a new connection object.
+     */
+    public Connection() {
+    	// set defaults from the environment
+    	setHost(Util.getEnv("LabRADHost", "localhost"));
+    	try {
+    		setPort(Integer.valueOf(Util.getEnv("LabRADPort", "7682")));
+    	} catch (NumberFormatException e) {
+    		setPort(7682);
+    	}
+    	setPassword(Util.getEnv("LabRADPassword", ""));
+    	// always start in the disconnected state
+    	setConnected(false);
+    }
+    
+    /**
+     * Connect to the LabRAD manager.
      * @throws UnknownHostException
      * @throws IOException
      * @throws ExecutionException
      * @throws InterruptedException
      * @throws IncorrectPasswordException
      */
-    Client(String host, int port, String password)
-			throws UnknownHostException, IOException, ExecutionException,
-			InterruptedException, IncorrectPasswordException {
-    	// TODO: create clients using a builder to allow for fallback to environment defaults.
-	    this.host = host;
-	    this.port = port;
-	
+    public void connect() throws UnknownHostException, IOException, ExecutionException,
+								 InterruptedException, IncorrectPasswordException {
 	    socket = new Socket(host, port);
 	    socket.setTcpNoDelay(true);
 	    socket.setKeepAlive(true);
@@ -232,8 +246,35 @@ public class Client {
 	
 	    writeQueue = new LinkedBlockingQueue<Packet>();
 	
-	    reader = new Reader();
-	    writer = new Writer();
+	    reader = new Thread(new Runnable() {
+	    	public void run() {
+	            try {
+	                while (!Thread.interrupted())
+	                    handlePacket(inputStream.readPacket());
+	            } catch (IOException e) {
+	            	// let the client know that we have disconnected.
+	            	if (!Thread.interrupted())
+	            		close(e);
+	            }
+	        }
+	    }, "Packet Reader Thread");
+	    
+	    writer = new Thread(new Runnable() {
+	    	public void run() {
+	            try {
+	                while (true) {
+	                    Packet p = writeQueue.take();
+	                    outputStream.writePacket(p);
+	                }
+	            } catch (InterruptedException e) {
+	            	// this happens when the connection is closed.
+	            } catch (IOException e) {
+	            	// let the client know that we have disconnected.
+	            	close(e);
+	            }
+	        }
+	    }, "Packet Writer Thread");
+	    
 	    reader.start();
 	    writer.start();
 	    
@@ -288,30 +329,6 @@ public class Client {
 	    response = sendAndWait(new Request(Constants.MANAGER).add(0, data)).get(0);
 	    ID = response.getWord();
 	}
-
-
-	/**
-	 * @return the host
-	 */
-	public String getHost() { return host; }
-
-
-	/**
-	 * @return the port
-	 */
-	public int getPort() { return port; }
-
-
-	/**
-	 * @return the iD
-	 */
-	public long getID() { return ID; }
-
-	/**
-	 * Get the welcome message returned by the manager when we connected.
-	 * @return
-	 */
-	public String getLoginMessage() { return loginMessage; }
 	
 
 	/**
@@ -368,7 +385,25 @@ public class Client {
     	}
     }
 
-
+	
+	// Message functions
+    
+    /**
+     * Sends a LabRAD message to the specified server.
+     * @param server
+     * @param records
+     */
+    public synchronized void sendMessage(Request request) {
+    	// TODO: do lookups before sending a message
+    	if (!connected) {
+    		throw new RuntimeException("not connected!");
+    	}
+    	writeQueue.add(Packet.forMessage(request));
+    }
+	
+	
+    // Request functions
+    
 	/**
 	 * 
 	 * @param server
@@ -438,19 +473,24 @@ public class Client {
 
 	
 	/**
-     * Handle response packets coming in from the wire.
+     * Handle packets coming in from the wire.
      * @param packet
      */
-    private synchronized void handleResponse(Packet packet) {
-        int request = -packet.getRequest();
-        if (request == 0) {
+    private synchronized void handlePacket(Packet packet) {
+        int request = packet.getRequest();
+        if (request < 0) {
+        	// response
+        	if (pendingRequests.containsKey(request)) {
+        		pendingRequests.remove(request).set(packet);
+        		requestPool.add(request);
+        	} else {
+        		// response to a request we didn't make
+        		// TODO log this as an error
+        	}
+        } else if (request == 0) {
         	// handle incoming message
-        } else if (pendingRequests.containsKey(request)) {
-        	requestPool.add(request);
-        	pendingRequests.remove(request).set(packet);
         } else {
-        	// response to a request we didn't make
-        	// TODO log this as an error
+        	// handle incoming request
         }
     }
 	
@@ -583,20 +623,6 @@ public class Client {
     }
     
     
-    // Message functions
-    
-    /**
-     * Sends a LabRAD message to the specified server.
-     * @param server
-     * @param records
-     */
-    public synchronized void sendMessage(Request request) {
-    	if (!connected) {
-    		throw new RuntimeException("not connected!");
-    	}
-    	writeQueue.add(Packet.forMessage(request));
-    }
-    
     /**
      * Tests some of the basic functionality of the client connection.
      * This method requires that the "Python Test Server" be running
@@ -616,12 +642,15 @@ public class Client {
         
         String server = "Python Test Server";
         String setting = "Get Random Data";
-        String password = "martinisgroup";
         
         List<Future<List<Data>>> requests = new ArrayList<Future<List<Data>>>();
         
         // connect to LabRAD
-        Client c = new Client("localhost", 7682, password);
+        Connection c = new Connection();
+        System.out.println(c.getHost());
+        System.out.println(c.getPort());
+        System.out.println(c.password);
+        c.connect();
                 
         // set delay to 1 second
         c.sendAndWait(new Request(server).add("Echo Delay", new Data("v[s]").setValue(1.0)));

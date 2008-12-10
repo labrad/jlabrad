@@ -8,7 +8,7 @@ public class Util {
      * @param bytes
      * @return
      */
-    public String dumpBytes(byte[] bytes) {
+    public static String dumpBytes(byte[] bytes) {
         int counter = 0;
         String dump = "";
         for (byte b : bytes) {
@@ -31,7 +31,7 @@ public class Util {
 	 * @param defaultVal
 	 * @return
 	 */
-	public String getEnv(String key, String defaultVal) {
+	public static String getEnv(String key, String defaultVal) {
 		Map<String, String> env = System.getenv();
 		if (env.containsKey(key)) {
 			return env.get(key);

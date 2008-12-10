@@ -1,5 +1,6 @@
 General
 - try to write things as interfaces, rather than concrete types.
+- implement connection object, server, client, etc. as beans (ala delphi API)
 
 Client
 - add some message dispatching capabilities
