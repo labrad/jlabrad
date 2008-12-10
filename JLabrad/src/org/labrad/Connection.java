@@ -217,13 +217,13 @@ public class Connection implements Serializable {
      */
     public Connection() {
     	// set defaults from the environment
-    	setHost(Util.getEnv("LabRADHost", "localhost"));
+    	setHost(Util.getEnv("LABRADHOST", "localhost"));
     	try {
-    		setPort(Integer.valueOf(Util.getEnv("LabRADPort", "7682")));
+    		setPort(Integer.valueOf(Util.getEnv("LABRADPORT", "7682")));
     	} catch (NumberFormatException e) {
     		setPort(7682);
     	}
-    	setPassword(Util.getEnv("LabRADPassword", ""));
+    	setPassword(Util.getEnv("LABRADPASSWORD", ""));
     	// always start in the disconnected state
     	setConnected(false);
     }
@@ -480,6 +480,7 @@ public class Connection implements Serializable {
         int request = packet.getRequest();
         if (request < 0) {
         	// response
+        	request = -request;
         	if (pendingRequests.containsKey(request)) {
         		pendingRequests.remove(request).set(packet);
         		requestPool.add(request);
@@ -639,6 +640,8 @@ public class Connection implements Serializable {
     		       NoSuchAlgorithmException {
         Data response;
         long start, end;
+        int nRandomData = 100;
+        int nPings = 1000;
         
         String server = "Python Test Server";
         String setting = "Get Random Data";
@@ -647,9 +650,6 @@ public class Connection implements Serializable {
         
         // connect to LabRAD
         Connection c = new Connection();
-        System.out.println(c.getHost());
-        System.out.println(c.getPort());
-        System.out.println(c.password);
         c.connect();
                 
         // set delay to 1 second
@@ -672,7 +672,7 @@ public class Connection implements Serializable {
         // random data
         System.out.println("getting random data, with printing...");
         start = System.currentTimeMillis();
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < nRandomData; i++) {
         	requests.add(c.send(new Request(server).add(setting)));
         }
         for (Future<List<Data>> request : requests) {
@@ -687,7 +687,7 @@ public class Connection implements Serializable {
         System.out.println("getting random data, make pretty, but don't print...");
         requests.clear();
         start = System.currentTimeMillis();
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < nRandomData; i++) {
             requests.add(c.send(new Request(server).add(setting)));
         }
         for (Future<List<Data>> request : requests) {
@@ -700,7 +700,7 @@ public class Connection implements Serializable {
         System.out.println("getting random data, no printing...");
         requests.clear();
         start = System.currentTimeMillis();
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < nRandomData; i++) {
         	requests.add(c.send(new Request(server).add(setting)));
         }
         for (Future<List<Data>> request : requests) {
@@ -717,10 +717,10 @@ public class Connection implements Serializable {
         System.out.println("done.  elapsed: " + (end - start) + " ms.");
         
         // ping manager
-        System.out.println("pinging manager 10000 times...");
+        System.out.println("pinging manager " + nPings + " times...");
         requests.clear();
         start = System.currentTimeMillis();
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < nPings; i++) {
         	requests.add(c.send(new Request("Manager")));
         }
         for (Future<List<Data>> request : requests) {

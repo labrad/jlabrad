@@ -33,10 +33,13 @@ public class Util {
 	 */
 	public static String getEnv(String key, String defaultVal) {
 		Map<String, String> env = System.getenv();
-		if (env.containsKey(key)) {
-			return env.get(key);
-		} else {
-			return defaultVal;
+		String value = defaultVal;
+		for (String envKey : env.keySet()) {
+			if (key.equalsIgnoreCase(envKey)) {
+				value = env.get(envKey);
+				break;
+			}
 		}
+		return value;
 	}
 }
