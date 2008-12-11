@@ -21,7 +21,7 @@ import org.labrad.types.Type;
  * capabilities of LabVIEW, from National Instruments.  Each piece of LabRAD
  * data has a Type object which is specified by a String type tag.
  */
-public class Data {
+public class Data implements Cloneable {
     public static final String STRING_ENCODING = "ISO-8859-1";
     public static final Data EMPTY = new Data("");
     
@@ -31,13 +31,82 @@ public class Data {
     // The Java Date class measures time as milliseconds since Jan 1, 1970 GMT.
     // The difference between these two is 24107 days.
     // 
-    private static long deltaSeconds = 24107 * 24 * 60 * 60;
+    private static long DELTA_SECONDS = 24107 * 24 * 60 * 60;
 
     private Type type;
     private byte[] data;
     private int ofs;
     private List<byte[]> heap;
 
+    /**
+     * Make a copy of this Data object.
+     */
+    @Override
+    public Data clone() {
+    	Data clone = new Data(this.getType());
+    	copy(this, clone);
+    	return clone;
+    }
+    
+    /**
+     * Copy Data object src to dest.
+     * @param src
+     * @param dest
+     * @return
+     */
+    private static Data copy(Data src, Data dest) {
+    	switch (src.getType().getCode()) {
+    		case BOOL: dest.setBool(src.getBool()); break;
+    		case INT: dest.setInt(src.getInt()); break;
+    		case WORD: dest.setWord(src.getWord()); break;
+    		case VALUE: dest.setValue(src.getValue()); break;
+    		case COMPLEX: dest.setComplex(src.getComplex()); break;
+    		case TIME: dest.setTime(src.getTime()); break;
+    		case STR: dest.setBytes(src.getBytes()); break;
+    		case LIST:
+    			int[] shape = src.getArrayShape();
+    			int[] indices = new int[shape.length];
+    			dest.setArrayShape(shape);
+    			copyList(src, dest, shape, indices, 0);
+    			break;
+    			
+    		case CLUSTER:
+    			for (int i = 0; i < src.getClusterSize(); i++) {
+    				copy(src.get(i), dest.get(i));
+    			}
+    			break;
+    			
+    		case ERROR:
+    			dest.setError(src.getErrorCode(), src.getErrorMessage());
+    			// TODO: add error payloads.
+    			//clone.setPayload(src.getErrorPayload());
+    			
+    		default:
+    	    	throw new RuntimeException("Not implemented!");
+    	}
+    	return dest;
+    }
+    
+    /**
+     * Copy a (possibly multidimensional) list from another Data object to this one.
+     * @param other
+     * @param shape
+     * @param indices
+     * @param level
+     */
+    private static void copyList(Data src, Data dest, int[] shape, int[] indices, int level) {
+        for (int i = 0; i < shape[level]; i++) {
+            indices[level] = i;
+            if (level == shape.length - 1) {
+                dest.get(indices).set(src.get(indices));
+            } else {
+            	copyList(src, dest, shape, indices, level + 1);
+            }
+        }
+    }
+    
+    
+    // static constructors for building clusters from groups of data objects
     /**
      * Build a cluster from an array of other data objects.
      * @param elements
@@ -68,6 +137,7 @@ public class Data {
     public static Data valueOf(boolean b) { return new Data("b").setBool(b); }
     public static Data valueOf(int i) { return new Data("i").setInt(i); }
     public static Data valueOf(long w) { return new Data("w").setWord(w); }
+    public static Data valueOf(byte[] b) { return new Data("s").setBytes(b); }
     public static Data valueOf(String s) { return new Data("s").setString(s); }
     public static Data valueOf(Date t) { return new Data("t").setTime(t); }
     
@@ -136,7 +206,7 @@ public class Data {
      * This is used to mark pointers into the heap so we know when we can
      * reuse heap addresses.  By initializing the byte array with 0xff,
      * all heap addresses will initially be set to -1, which is never
-     * a valied heap index.
+     * a valid heap index.
      * @param length of byte array to create
      * @return array of bytes initialized with 0xff
      */
@@ -574,52 +644,10 @@ public class Data {
      * @return
      */
     public Data set(Data other) {
-    	// TODO: first check that datatypes match, then use non-checking gets/sets
-    	// TODO: check units for Value and Complex
-    	switch (type.getCode()) {
-    		case BOOL: setBool(other.getBool()); break;
-    		case INT: setInt(other.getInt()); break;
-    		case WORD: setWord(other.getWord()); break;
-    		case VALUE: setValue(other.getValue()); break;
-    		case COMPLEX: setComplex(other.getComplex()); break;
-    		case TIME: setTime(other.getTime()); break;
-    		case STR: setBytes(other.getBytes()); break;
-    		case LIST:
-    			int[] shape = other.getArrayShape();
-    			int[] indices = new int[shape.length];
-    			setArrayShape(shape);
-    			copyList(other, shape, indices, 0);
-    			break;
-    			
-    		case CLUSTER:
-    			for (int i = 0; i < other.getClusterSize(); i++) {
-    				get(i).set(other.get(i));
-    			}
-    			break;
-    			
-    		default:
-    	    	throw new RuntimeException("Not implemented!");
-    	}
+    	copy(other, this);
     	return this;
     }
     
-    /**
-     * Copy a (possibly multidimensional) list from another Data object to this one.
-     * @param other
-     * @param shape
-     * @param indices
-     * @param level
-     */
-    private void copyList(Data other, int[] shape, int[] indices, int level) {
-        for (int i = 0; i < shape[level]; i++) {
-            indices[level] = i;
-            if (level == shape.length - 1) {
-                get(indices).set(other.get(indices));
-            } else {
-            	copyList(other, shape, indices, level + 1);
-            }
-        }
-    }
     
     // type checks
     public boolean isBool() { return type instanceof org.labrad.types.Bool; }
@@ -705,7 +733,7 @@ public class Data {
 		ByteArrayView ofs = getOffset();
 		long seconds = Bytes.getLong(ofs.getBytes(), ofs.getOffset());
 		long fraction = Bytes.getLong(ofs.getBytes(), ofs.getOffset() + 8);
-		seconds -= deltaSeconds;
+		seconds -= DELTA_SECONDS;
 		fraction = (long)(((double) fraction) / Long.MAX_VALUE * 1000);
 	    return new Date(seconds * 1000 + fraction);
 	}
@@ -845,7 +873,7 @@ public class Data {
 	public Data setTime(Date date) {
 		getSubtype(Type.Code.TIME);
 		long millis = date.getTime();
-		long seconds = millis / 1000 + deltaSeconds;
+		long seconds = millis / 1000 + DELTA_SECONDS;
 		long fraction = millis % 1000;
 		fraction = (long)(((double) fraction) / 1000 * Long.MAX_VALUE);
 		ByteArrayView ofs = getOffset();
@@ -978,48 +1006,22 @@ public class Data {
 	}
 
 	// vectorized getters
-	public <T> List<T> getList(Type.Code code, Getter<T> getter) {
+	public <T> List<T> getList(Getter<T> getter) {
 		getSubtype(Type.Code.LIST);
-		getSubtype(code, 0);
+		getSubtype(getter.getType().getCode(), 0);
 		List<T> result = new ArrayList<T>();
 		for (int i = 0; i < getArraySize(); i++) {
 			result.add(getter.get(get(i)));
 		}
 		return result;
 	}
-	public interface Getter<T> {
-		T get(Data data);
-	}
-	private static Getter<Boolean> boolGetter = new Getter<Boolean>() {
-		public Boolean get(Data data) { return data.getBool(); }
-	};
-	private static Getter<Integer> intGetter = new Getter<Integer>() {
-		public Integer get(Data data) { return data.getInt(); }
-	};
-	private static Getter<Long> wordGetter = new Getter<Long>() {
-		public Long get(Data data) { return data.getWord(); }
-	};
-	private static Getter<String> stringGetter = new Getter<String>() {
-		public String get(Data data) { return data.getString(); }
-	};
-	private static Getter<Date> dateGetter = new Getter<Date>() {
-		public Date get(Data data) { return data.getTime(); }
-	};
-	private static Getter<Double> valueGetter = new Getter<Double>() {
-		public Double get(Data data) { return data.getValue(); }
-	};
-	private static Getter<Complex> complexGetter = new Getter<Complex>() {
-		public Complex get(Data data) { return data.getComplex(); }
-	};
-	
-	public List<Boolean> getBoolList() { return getList(Type.Code.BOOL, boolGetter); }
-	public List<Integer> getIntList() { return getList(Type.Code.INT, intGetter); }
-	public List<Long> getWordList() { return getList(Type.Code.WORD, wordGetter); }
-	public List<String> getStringList() { return getList(Type.Code.STR, stringGetter); }
-	public List<Date> getDateList() { return getList(Type.Code.TIME, dateGetter); }
-	public List<Double> getDoubleList() { return getList(Type.Code.VALUE, valueGetter); }
-	public List<Complex> getComplexList() { return getList(Type.Code.COMPLEX, complexGetter); }
-	
+	public List<Boolean> getBoolList() { return getList(Getters.boolGetter); }
+	public List<Integer> getIntList() { return getList(Getters.intGetter); }
+	public List<Long> getWordList() { return getList(Getters.wordGetter); }
+	public List<String> getStringList() { return getList(Getters.stringGetter); }
+	public List<Date> getDateList() { return getList(Getters.dateGetter); }
+	public List<Double> getDoubleList() { return getList(Getters.valueGetter); }
+	public List<Complex> getComplexList() { return getList(Getters.complexGetter); }
 	
 	// vectorized indexed getters
 //	public List<Boolean> getBoolList(int...indices) { return get(indices).getBoolList(); }
@@ -1027,49 +1029,24 @@ public class Data {
 //	public List<Long> getWordList(int...indices) { return get(indices).getWordList(); }
 //	public List<String> getStringList(int...indices) { return get(indices).getStringList(); }
     
+	
     // vectorized setters
-	public <T> Data setList(List<T> data, Type.Code code, Setter<T> setter) {
+	public <T> Data setList(List<T> data, Setter<T> setter) {
 		getSubtype(Type.Code.LIST);
-		getSubtype(code, 0);
+		getSubtype(setter.getType().getCode(), 0);
 		setArraySize(data.size());
 		for (int i = 0; i < data.size(); i++) {
 			setter.set(get(i), data.get(i));
 		}
 		return this;
 	}
-	public interface Setter<T> {
-		void set(Data data, T value);
-	}
-	private static Setter<Boolean> boolSetter = new Setter<Boolean>() {
-		public void set(Data data, Boolean value) { data.setBool(value); }
-	};
-	private static Setter<Integer> intSetter = new Setter<Integer>() {
-		public void set(Data data, Integer value) { data.setInt(value); }
-	};
-	private static Setter<Long> wordSetter = new Setter<Long>() {
-		public void set(Data data, Long value) { data.setWord(value); }
-	};
-	private static Setter<String> stringSetter = new Setter<String>() {
-		public void set(Data data, String value) { data.setString(value); }
-	};
-	private static Setter<Date> dateSetter = new Setter<Date>() {
-		public void set(Data data, Date value) { data.setTime(value); }
-	};
-	private static Setter<Double> valueSetter = new Setter<Double>() {
-		public void set(Data data, Double value) { data.setValue(value); }
-	};
-	private static Setter<Complex> complexSetter = new Setter<Complex>() {
-		public void set(Data data, Complex value) { data.setComplex(value); }
-	};
-	
-	
-	public Data setBoolList(List<Boolean> data) { return setList(data, Type.Code.BOOL, boolSetter); }
-	public Data setIntList(List<Integer> data) { return setList(data, Type.Code.INT, intSetter); }
-	public Data setWordList(List<Long> data) { return setList(data, Type.Code.WORD, wordSetter); }
-    public Data setStringList(List<String> data) { return setList(data, Type.Code.STR, stringSetter); }
-    public Data setDateList(List<Date> data) { return setList(data, Type.Code.TIME, dateSetter); }
-    public Data setDoubleList(List<Double> data) { return setList(data, Type.Code.VALUE, valueSetter); }
-    public Data setComplexList(List<Complex> data) { return setList(data, Type.Code.COMPLEX, complexSetter); }
+	public Data setBoolList(List<Boolean> data) { return setList(data, Setters.boolSetter); }
+	public Data setIntList(List<Integer> data) { return setList(data, Setters.intSetter); }
+	public Data setWordList(List<Long> data) { return setList(data, Setters.wordSetter); }
+    public Data setStringList(List<String> data) { return setList(data, Setters.stringSetter); }
+    public Data setDateList(List<Date> data) { return setList(data, Setters.dateSetter); }
+    public Data setDoubleList(List<Double> data) { return setList(data, Setters.valueSetter); }
+    public Data setComplexList(List<Complex> data) { return setList(data, Setters.complexSetter); }
     
     
     // vectorized indexed setters
@@ -1088,8 +1065,23 @@ public class Data {
     	return this;
     }
     
-    public Data setStringList(List<String> strings, int...indices) {
-    	get(indices).setStringList(strings);
+    public Data setStringList(List<String> data, int...indices) {
+    	get(indices).setStringList(data);
+    	return this;
+    }
+    
+    public Data setDateList(List<Date> data, int...indices) {
+    	get(indices).setDateList(data);
+    	return this;
+    }
+    
+    public Data setDoubleList(List<Double> data, int...indices) {
+    	get(indices).setDoubleList(data);
+    	return this;
+    }
+    
+    public Data setComplexList(List<Complex> data, int...indices) {
+    	get(indices).setComplexList(data);
     	return this;
     }
     

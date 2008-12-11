@@ -40,6 +40,7 @@ public class Connection implements Serializable {
 	private static final String DEFAULT_NAME = "Java Client";
     
 	// properties
+	private String name;
     private String host;
     private int port;
     private String password;
@@ -47,6 +48,11 @@ public class Connection implements Serializable {
     private String loginMessage;
     private boolean connected = false;
 
+    public String getName() { return name; }
+    public void setName(String name) {
+    	this.name = name;
+    }
+    
     /**
 	 * @return the host
 	 */
@@ -216,6 +222,7 @@ public class Connection implements Serializable {
      * Create a new connection object.
      */
     public Connection() {
+    	setName(DEFAULT_NAME);
     	// set defaults from the environment
     	setHost(Util.getEnv("LABRADHOST", "localhost"));
     	try {
@@ -236,8 +243,9 @@ public class Connection implements Serializable {
      * @throws InterruptedException
      * @throws IncorrectPasswordException
      */
-    public void connect() throws UnknownHostException, IOException, ExecutionException,
-								 InterruptedException, IncorrectPasswordException {
+    public synchronized void connect()
+    		throws UnknownHostException, IOException, ExecutionException,
+				   InterruptedException, IncorrectPasswordException {
 	    socket = new Socket(host, port);
 	    socket.setTcpNoDelay(true);
 	    socket.setKeepAlive(true);
@@ -278,8 +286,13 @@ public class Connection implements Serializable {
 	    reader.start();
 	    writer.start();
 	    
-	    connected = true;
-	    doLogin(password);
+	    try {
+	    	connected = true; // set this so that login requests will complete
+	    	doLogin(password);
+	    } finally {
+	    	connected = false;
+	    }
+	    setConnected(true);
 	}
 
     
@@ -295,10 +308,11 @@ public class Connection implements Serializable {
 	private void doLogin(String password)
 			throws InterruptedException, ExecutionException,
 			IncorrectPasswordException, IOException {
+		long mgr = Constants.MANAGER;
 		Data data, response;
 	    
 	    // send first ping packet
-	    response = sendAndWait(new Request(Constants.MANAGER)).get(0);
+	    response = sendAndWait(new Request(mgr)).get(0);
 	    
 	    // get password challenge
 	    MessageDigest md;
@@ -313,9 +327,9 @@ public class Connection implements Serializable {
 	    md.update(password.getBytes(Data.STRING_ENCODING));
 	
 	    // send password response
-	    data = new Data("s").setBytes(md.digest());
 	    try {
-	    	response = sendAndWait(new Request(Constants.MANAGER).add(0, data)).get(0);
+	    	data = Data.valueOf(md.digest());
+	    	response = sendAndWait(new Request(mgr).add(0, data)).get(0);
 	    } catch (ExecutionException e) {
 	    	throw new IncorrectPasswordException();
 	    }
@@ -325,8 +339,8 @@ public class Connection implements Serializable {
 	    System.out.println(loginMessage);
 	
 	    // send identification packet
-	    data = new Data("ws").setWord(Constants.PROTOCOL, 0).setString(DEFAULT_NAME, 1);
-	    response = sendAndWait(new Request(Constants.MANAGER).add(0, data)).get(0);
+	    data = new Data("ws").setWord(Constants.PROTOCOL, 0).setString(name, 1);
+	    response = sendAndWait(new Request(mgr).add(0, data)).get(0);
 	    ID = response.getWord();
 	}
 	
