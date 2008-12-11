@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 // TODO add a function to find types for generic java data
 // TODO add comment handling to type tag parsing
 
@@ -30,7 +28,8 @@ public abstract class Type {
 		Code(String name) {
 			this.name = name;
 		}
-		
+
+        @Override
 		public String toString() {
 			return name;
 		}
@@ -95,6 +94,7 @@ public abstract class Type {
 
         int length() { return s.length(); }
 
+        @Override
         public String toString() { return s; }
     }
     
@@ -257,7 +257,7 @@ public abstract class Type {
     public char getChar() { return 0; }
 
     public Code getCode() {
-    	throw new NotImplementedException();
+    	throw new RuntimeException("Not implemented.");
     }
     
     /**
@@ -281,23 +281,23 @@ public abstract class Type {
      * @return
      */
     public Type getSubtype(int index) {
-        throw new NotImplementedException();
+        throw new RuntimeException("Not implemented.");
     }
 
     public int getOffset(int index) {
-        throw new NotImplementedException();
+        throw new RuntimeException("Not implemented.");
     }
 
     public int size() {
-        throw new NotImplementedException();
+        throw new RuntimeException("Not implemented.");
     }
 
     public String getUnits() {
-        throw new NotImplementedException();
+        throw new RuntimeException("Not implemented.");
     }
 
     public int getDepth() {
-        throw new NotImplementedException();
+        throw new RuntimeException("Not implemented.");
     }
 
     public static void main(String[] args) {

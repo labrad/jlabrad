@@ -1,5 +1,7 @@
 package org.labrad;
 
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.Socket;
@@ -7,12 +9,9 @@ import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -20,8 +19,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.labrad.data.Context;
 import org.labrad.data.Data;
@@ -31,7 +28,6 @@ import org.labrad.data.PacketOutputStream;
 import org.labrad.data.Record;
 import org.labrad.data.Request;
 import org.labrad.errors.IncorrectPasswordException;
-import org.labrad.errors.LabradException;
 
 public class Connection implements Serializable {
 	/** Version for serialization. */
@@ -47,6 +43,10 @@ public class Connection implements Serializable {
     private long ID;
     private String loginMessage;
     private boolean connected = false;
+
+    private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
+    private final MessageListenerSupport mls = new MessageListenerSupport(this);
+    private final ConnectionListenerSupport connectionListeners = new ConnectionListenerSupport(this);
 
     public String getName() { return name; }
     public void setName(String name) {
@@ -92,10 +92,40 @@ public class Connection implements Serializable {
 		return connected;
 	}
 	private void setConnected(boolean connected) {
-		this.connected = connected;
+        boolean old = this.connected;
+        this.connected = connected;
+        pcs.firePropertyChange("connected", old, connected);
+        if (connected) {
+            connectionListeners.fireConnected();
+        } else {
+            connectionListeners.fireDisconnected();
+        }
 	}
-	
-	
+
+    public void addPropertyChangeListener(PropertyChangeListener listener) {
+        pcs.addPropertyChangeListener(listener);
+    }
+
+    public void removePropertyChangeListener(PropertyChangeListener listener) {
+        pcs.removePropertyChangeListener(listener);
+    }
+
+    public void addMessageListener(MessageListener listener) {
+        mls.addListener(listener);
+    }
+
+    public void removeMessageListener(MessageListener listener) {
+        mls.removeListener(listener);
+    }
+
+    public void addConnectionListener(ConnectionListener listener) {
+        connectionListeners.addListener(listener);
+    }
+
+    public void removeConnectionListener(ConnectionListener listener) {
+        connectionListeners.removeListener(listener);
+    }
+
 	// networking stuff
     private Socket socket;
     private Thread reader, writer;
@@ -105,17 +135,10 @@ public class Connection implements Serializable {
     
     /** Low word of next context that will be created. */
 	private Long nextContext = 1L;
-    
-    /** ID to be used for the next outgoing request. */
-    private int nextRequest = 1;
-    
+        
     /** Request IDs that are available to be reused. */
-    private List<Integer> requestPool = new ArrayList<Integer>();
+    private RequestDispatcher requestDispatcher;
     
-    /** Maps request numbers to receivers for all pending requests. */
-    private Map<Integer, RequestReceiver> pendingRequests =
-    	new HashMap<Integer, RequestReceiver>();
-
     /** Performs server and method lookups. */
     private ExecutorService lookupService = Executors.newCachedThreadPool();
     
@@ -127,110 +150,18 @@ public class Connection implements Serializable {
     	new ConcurrentHashMap<Long, ConcurrentMap<String, Long>>();
     
     /**
-     * Represents a pending LabRAD request.
-     */
-    private static class RequestReceiver implements Future<List<Data>> {
-    	private enum RequestStatus { PENDING, DONE, FAILED, CANCELLED; }
-    	
-    	private RequestStatus status = RequestStatus.PENDING;
-    	private List<Data> response;
-    	private Throwable cause;
-    	
-    	/**
-    	 * Cancel this request.
-    	 * @return true if the request was cancelled
-    	 */
-		@Override
-		public synchronized boolean cancel(boolean mayInterruptIfRunning) {
-			boolean cancelled = false;
-			if (status == RequestStatus.PENDING) {
-				status = RequestStatus.CANCELLED;
-				if (mayInterruptIfRunning) {
-					notifyAll();
-				}
-				cancelled = true;
-			}
-			return cancelled;
-		}
-
-		@Override
-		public synchronized List<Data> get() throws InterruptedException, ExecutionException {
-			while (!isDone()) {
-				wait();
-			}
-			switch (status) {
-				case CANCELLED: throw new CancellationException();
-				case FAILED: throw new ExecutionException(cause);
-				default:
-			}
-			return response;
-		}
-
-		@Override
-		public synchronized List<Data> get(long duration, TimeUnit timeUnit)
-				throws InterruptedException, ExecutionException,
-				TimeoutException {
-			while (!isDone()) {
-				wait(TimeUnit.MILLISECONDS.convert(duration, timeUnit));
-			}
-			switch (status) {
-				case CANCELLED: throw new CancellationException();
-				case FAILED: throw new ExecutionException(cause);
-				default:
-			}
-			return response;
-		}
-
-		@Override
-		public synchronized boolean isCancelled() {
-			return status == RequestStatus.CANCELLED;
-		}
-
-		@Override
-		public synchronized boolean isDone() {
-			return status != RequestStatus.PENDING;
-		}
-		
-		protected synchronized void set(Packet packet) {
-			if (!isCancelled()) {
-				boolean failed = false;
-				List<Data> response = new ArrayList<Data>();
-				for (Record rec : packet.getRecords()) {
-					Data data = rec.getData();
-					if (data.isError()) {
-						failed = true;
-						this.cause = new LabradException(data);
-						break;
-					} else {
-						response.add(data);
-					}
-				}
-				this.response = response;
-				status = failed ? RequestStatus.FAILED : RequestStatus.DONE;
-			}
-			notifyAll();
-		}
-		
-		protected synchronized void fail(Throwable cause) {
-			this.cause = cause;
-			status = RequestStatus.FAILED;
-			notifyAll();
-		}
-    }
-    
-    /**
      * Create a new connection object.
      */
     public Connection() {
     	setName(DEFAULT_NAME);
     	// set defaults from the environment
-    	setHost(Util.getEnv("LABRADHOST", "localhost"));
+    	setHost(Util.getEnv("LABRADHOST", Constants.DEFAULT_HOST));
     	try {
-    		setPort(Integer.valueOf(Util.getEnv("LABRADPORT", "7682")));
+    		setPort(Integer.valueOf(Util.getEnv("LABRADPORT", String.valueOf(Constants.DEFAULT_PORT))));
     	} catch (NumberFormatException e) {
-    		setPort(7682);
+    		setPort(Constants.DEFAULT_PORT);
     	}
-    	setPassword(Util.getEnv("LABRADPASSWORD", ""));
+    	setPassword(Util.getEnv("LABRADPASSWORD", Constants.DEFAULT_PASSWORD));
     	// always start in the disconnected state
     	setConnected(false);
     }
@@ -243,9 +174,11 @@ public class Connection implements Serializable {
      * @throws InterruptedException
      * @throws IncorrectPasswordException
      */
-    public synchronized void connect()
+    public void connect()
     		throws UnknownHostException, IOException, ExecutionException,
 				   InterruptedException, IncorrectPasswordException {
+        // TODO: clean up exceptions thrown here
+        // TODO: try/catch around login with close called on an exception
 	    socket = new Socket(host, port);
 	    socket.setTcpNoDelay(true);
 	    socket.setKeepAlive(true);
@@ -253,9 +186,10 @@ public class Connection implements Serializable {
 	    outputStream = new PacketOutputStream(socket.getOutputStream());
 	
 	    writeQueue = new LinkedBlockingQueue<Packet>();
+        requestDispatcher = new RequestDispatcher(writeQueue);
 	
 	    reader = new Thread(new Runnable() {
-	    	public void run() {
+            @Override public void run() {
 	            try {
 	                while (!Thread.interrupted())
 	                    handlePacket(inputStream.readPacket());
@@ -268,7 +202,7 @@ public class Connection implements Serializable {
 	    }, "Packet Reader Thread");
 	    
 	    writer = new Thread(new Runnable() {
-	    	public void run() {
+	    	@Override public void run() {
 	            try {
 	                while (true) {
 	                    Packet p = writeQueue.take();
@@ -355,9 +289,7 @@ public class Connection implements Serializable {
 			lookupService.shutdownNow();
 			
 			// cancel all pending requests
-			for (RequestReceiver receiver : pendingRequests.values()) {
-				receiver.fail(cause);
-			}
+            requestDispatcher.failAll(cause);
 	
 	    	// interrupt the writer thread
 	    	writer.interrupt();
@@ -427,20 +359,31 @@ public class Connection implements Serializable {
 	 */
 	public Future<List<Data>> send(final Request request)
 			throws IOException {
-	    doLookupsFromCache(request);
+	    return send(request, null);
+    }
+
+    /**
+     * Send a request with an explicit callback.
+     * @param request
+     * @param callback
+     * @return
+     * @throws java.io.IOException
+     */
+    public Future<List<Data>> send(final Request request, final RequestCallback callback)
+            throws IOException {
+        doLookupsFromCache(request);
 		if (request.needsLookup()) {
 	    	return lookupService.submit(new Callable<List<Data>>() {
 				@Override
 				public List<Data> call() throws Exception {
 					doLookups(request);
-					return sendWithoutLookups(request).get();
+					return sendWithoutLookups(request, callback).get();
 				}
 	    	});
 		} else {
-			return sendWithoutLookups(request);
+			return sendWithoutLookups(request, callback);
 		}
     }
-    
 	
 	/**
      * Makes a LabRAD request synchronously.  The request is sent over LabRAD and the
@@ -465,24 +408,17 @@ public class Connection implements Serializable {
 	 * @param server
 	 * @param records
 	 */
-	private synchronized Future<List<Data>> sendWithoutLookups(final Request request)
-			throws IOException {
-		if (!connected) {
+	private synchronized Future<List<Data>>
+            sendWithoutLookups(final Request request,
+                               final RequestCallback callback)
+                throws IOException {
+		if (!isConnected()) {
 			throw new IOException("not connected.");
 		}
 		if (request.needsLookup()) {
 			throw new RuntimeException("Server and/or setting IDs not looked up!");
 		}
-	    int requestNum;
-	    if (requestPool.isEmpty()) {
-	    	requestNum = nextRequest++;
-	    } else {
-	    	requestNum = requestPool.remove(0);
-	    }
-	    RequestReceiver receiver = new RequestReceiver();
-	    pendingRequests.put(requestNum, receiver);
-	    writeQueue.add(Packet.forRequest(request, requestNum));
-	    return receiver;
+	    return requestDispatcher.startRequest(request);
 	}
 
 	
@@ -490,20 +426,14 @@ public class Connection implements Serializable {
      * Handle packets coming in from the wire.
      * @param packet
      */
-    private synchronized void handlePacket(Packet packet) {
+    private void handlePacket(Packet packet) {
         int request = packet.getRequest();
         if (request < 0) {
         	// response
-        	request = -request;
-        	if (pendingRequests.containsKey(request)) {
-        		pendingRequests.remove(request).set(packet);
-        		requestPool.add(request);
-        	} else {
-        		// response to a request we didn't make
-        		// TODO log this as an error
-        	}
+            requestDispatcher.finishRequest(packet);
         } else if (request == 0) {
         	// handle incoming message
+            mls.fireMessage(packet);
         } else {
         	// handle incoming request
         }
@@ -530,9 +460,9 @@ public class Connection implements Serializable {
 			if (cache != null) {
 				for (Record r : request.getRecords()) {
 					if (r.needsLookup()) {
-						Long ID = cache.get(r.getName());
-						if (ID != null) {
-							r.setID(ID);
+						Long settingID = cache.get(r.getName());
+						if (settingID != null) {
+							r.setID(settingID);
 						}
 					}
 				}
@@ -565,9 +495,9 @@ public class Connection implements Serializable {
 			if (cache != null) {
 				for (Record r : request.getRecords()) {
 					if (r.needsLookup()) {
-						Long ID = cache.get(r.getName());
-						if (ID != null) {
-							r.setID(ID);
+						Long settingID = cache.get(r.getName());
+						if (settingID != null) {
+							r.setID(settingID);
 						} else {
 							lookups.add(r);
 						}
@@ -601,10 +531,10 @@ public class Connection implements Serializable {
     		throws IOException, InterruptedException, ExecutionException {
 	    Request request = new Request(Constants.MANAGER);
 	    request.add(Constants.LOOKUP, new Data("s").setString(server));
-    	long ID = sendAndWait(request).get(0).getWord();
-        serverCache.putIfAbsent(server, ID);
-        settingCache.putIfAbsent(ID, new ConcurrentHashMap<String, Long>());
-    	return ID;
+    	long serverID = sendAndWait(request).get(0).getWord();
+        serverCache.putIfAbsent(server, serverID);
+        settingCache.putIfAbsent(serverID, new ConcurrentHashMap<String, Long>());
+    	return serverID;
     }
     
     
@@ -664,6 +594,9 @@ public class Connection implements Serializable {
         
         // connect to LabRAD
         Connection c = new Connection();
+        c.setHost("localhost");
+        c.setPort(7682);
+        c.setPassword("martinisgroup");
         c.connect();
                 
         // set delay to 1 second

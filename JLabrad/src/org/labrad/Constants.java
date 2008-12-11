@@ -3,6 +3,15 @@ package org.labrad;
 import org.labrad.data.Context;
 
 public class Constants {
+    /** Default hostname for the manager. */
+    public static final String DEFAULT_HOST = "localhost";
+
+    /** Default port to use when connecting to the manager. */
+    public static final int DEFAULT_PORT = 7682;
+
+    /** Default password to use when connecting to the manager. */
+    public static final String DEFAULT_PASSWORD = "";
+
 	/** ID of the LabRAD manager. */
 	public static final long MANAGER = 1;
 	
