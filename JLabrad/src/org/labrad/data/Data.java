@@ -117,7 +117,7 @@ public class Data implements Cloneable {
         for (int i = 0; i < shape[level]; i++) {
             indices[level] = i;
             if (level == shape.length - 1) {
-                dest.get(indices).set(src.get(indices));
+            	copy(src.get(indices), dest.get(indices));
             } else {
             	copyList(src, dest, shape, indices, level + 1);
             }
