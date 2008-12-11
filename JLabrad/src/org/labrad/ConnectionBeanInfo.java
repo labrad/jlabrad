@@ -65,7 +65,7 @@ public class ConnectionBeanInfo extends SimpleBeanInfo {
         EventSetDescriptor[] eventSets = new EventSetDescriptor[2];
     
         try {
-            eventSets[EVENT_messageListener] = new EventSetDescriptor ( org.labrad.Connection.class, "messageListener", org.labrad.MessageListener.class, new String[] {"messageReceived"}, "addMessageListener", "removeMessageListener" ); // NOI18N
+            eventSets[EVENT_messageListener] = new EventSetDescriptor ( org.labrad.Connection.class, "messageListener", org.labrad.events.MessageListener.class, new String[] {"messageReceived"}, "addMessageListener", "removeMessageListener" ); // NOI18N
             eventSets[EVENT_propertyChangeListener] = new EventSetDescriptor ( org.labrad.Connection.class, "propertyChangeListener", java.beans.PropertyChangeListener.class, new String[] {"propertyChange"}, "addPropertyChangeListener", "removePropertyChangeListener" ); // NOI18N
         }
         catch(IntrospectionException e) {

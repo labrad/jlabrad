@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package org.labrad;
+package org.labrad.events;
 
 import java.util.ArrayList;
 import java.util.EventListener;
@@ -21,13 +21,13 @@ public class ListenerSupport<T extends EventListener> {
         this.source = source;
     }
 
-    void addListener(T listener) {
+    public void addListener(T listener) {
         if (!listeners.contains(listener)) {
             listeners.add(listener);
         }
     }
 
-    void removeListener(T listener) {
+    public void removeListener(T listener) {
         if (listeners.contains(listener)) {
             listeners.remove(listener);
         }

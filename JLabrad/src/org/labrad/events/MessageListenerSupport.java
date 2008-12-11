@@ -3,8 +3,9 @@
  * and open the template in the editor.
  */
 
-package org.labrad;
+package org.labrad.events;
 
+import org.labrad.events.ListenerSupport;
 import java.util.ArrayList;
 import java.util.List;
 import org.labrad.data.Packet;
@@ -16,7 +17,7 @@ import org.labrad.data.Packet;
 public class MessageListenerSupport extends ListenerSupport<MessageListener> {
     public MessageListenerSupport(Object source) { super(source); }
 
-    void fireMessage(Packet packet) {
+    public void fireMessage(Packet packet) {
         for (MessageListener listener : listeners) {
             listener.messageReceived(new MessageEvent(source, packet));
         }

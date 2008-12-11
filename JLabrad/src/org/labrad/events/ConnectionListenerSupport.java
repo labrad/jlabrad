@@ -3,7 +3,10 @@
  * and open the template in the editor.
  */
 
-package org.labrad;
+package org.labrad.events;
+
+import org.labrad.*;
+import org.labrad.events.ConnectionEvent;
 
 /**
  *
@@ -13,12 +16,12 @@ public class ConnectionListenerSupport extends ListenerSupport<ConnectionListene
     public ConnectionListenerSupport(Object source) {
         super(source);
     }
-    void fireConnected() {
+    public void fireConnected() {
         for (ConnectionListener listener : listeners) {
             listener.connected(new ConnectionEvent(source));
         }
     }
-    void fireDisconnected() {
+    public void fireDisconnected() {
         for (ConnectionListener listener : listeners) {
             listener.disconnected(new ConnectionEvent(source));
         }

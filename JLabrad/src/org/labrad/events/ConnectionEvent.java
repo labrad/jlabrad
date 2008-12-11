@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package org.labrad;
+package org.labrad.events;
 
 import java.util.EventObject;
 

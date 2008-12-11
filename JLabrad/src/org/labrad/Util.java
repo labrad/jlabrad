@@ -42,4 +42,21 @@ public class Util {
 		}
 		return value;
 	}
+
+    /**
+     * Get an integer value from the environment, returning a default if
+     * the environment variable is not found or cannot be converted to an int.
+     * @param key
+     * @param defaultVal
+     * @return
+     */
+    public static int getEnvInt(String key, int defaultVal) {
+        String defaultStr = String.valueOf(defaultVal);
+        String envStr = getEnv(key, defaultStr);
+        int value = defaultVal;
+        try {
+            value = Integer.valueOf(envStr);
+        } catch (NumberFormatException e) {}
+        return value;
+    }
 }

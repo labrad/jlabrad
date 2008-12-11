@@ -1,5 +1,9 @@
 package org.labrad;
 
+import org.labrad.events.MessageListenerSupport;
+import org.labrad.events.MessageListener;
+import org.labrad.events.ConnectionListener;
+import org.labrad.events.ConnectionListenerSupport;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
@@ -43,10 +47,6 @@ public class Connection implements Serializable {
     private long ID;
     private String loginMessage;
     private boolean connected = false;
-
-    private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
-    private final MessageListenerSupport mls = new MessageListenerSupport(this);
-    private final ConnectionListenerSupport connectionListeners = new ConnectionListenerSupport(this);
 
     public String getName() { return name; }
     public void setName(String name) {
@@ -102,6 +102,12 @@ public class Connection implements Serializable {
         }
 	}
 
+    // events
+    private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
+    private final MessageListenerSupport mls = new MessageListenerSupport(this);
+    private final ConnectionListenerSupport connectionListeners =
+                      new ConnectionListenerSupport(this);
+
     public void addPropertyChangeListener(PropertyChangeListener listener) {
         pcs.addPropertyChangeListener(listener);
     }
@@ -156,11 +162,7 @@ public class Connection implements Serializable {
     	setName(DEFAULT_NAME);
     	// set defaults from the environment
     	setHost(Util.getEnv("LABRADHOST", Constants.DEFAULT_HOST));
-    	try {
-    		setPort(Integer.valueOf(Util.getEnv("LABRADPORT", String.valueOf(Constants.DEFAULT_PORT))));
-    	} catch (NumberFormatException e) {
-    		setPort(Constants.DEFAULT_PORT);
-    	}
+        setPort(Util.getEnvInt("LABRADPORT", Constants.DEFAULT_PORT));
     	setPassword(Util.getEnv("LABRADPASSWORD", Constants.DEFAULT_PASSWORD));
     	// always start in the disconnected state
     	setConnected(false);
