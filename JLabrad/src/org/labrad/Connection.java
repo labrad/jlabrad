@@ -1,9 +1,24 @@
+/*
+ * Copyright 2008 Matthew Neeley
+ * 
+ * This file is part of JLabrad.
+ *
+ * JLabrad is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * JLabrad is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with JLabrad.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.labrad;
 
-import org.labrad.events.MessageListenerSupport;
-import org.labrad.events.MessageListener;
-import org.labrad.events.ConnectionListener;
-import org.labrad.events.ConnectionListenerSupport;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
@@ -32,7 +47,16 @@ import org.labrad.data.PacketOutputStream;
 import org.labrad.data.Record;
 import org.labrad.data.Request;
 import org.labrad.errors.IncorrectPasswordException;
+import org.labrad.events.ConnectionListener;
+import org.labrad.events.ConnectionListenerSupport;
+import org.labrad.events.MessageListener;
+import org.labrad.events.MessageListenerSupport;
 
+/**
+ * 
+ * @author Matthew Neeley
+ *
+ */
 public class Connection implements Serializable {
 	/** Version for serialization. */
 	private static final long serialVersionUID = 1L;
