@@ -62,6 +62,8 @@ class RequestReceiver implements Future<List<Data>> {
 
     /**
      * Cancel this request.
+     * @param mayInterruptIfRunning a boolean indicating whether
+     * to interrupt threads that are waiting to get the result
      * @return true if the request was cancelled
      */
     @Override
@@ -69,16 +71,22 @@ class RequestReceiver implements Future<List<Data>> {
         boolean cancelled = false;
         if (status == RequestStatus.PENDING) {
             status = RequestStatus.CANCELLED;
+            cause = new CancellationException();
+            cancelled = true;
             if (mayInterruptIfRunning) {
                 notifyAll();
             }
-            cancelled = true;
-            cause = new CancellationException();
             callbackFailure();
         }
         return cancelled;
     }
 
+    /**
+     * Wait for the request to complete and get the result.
+     * @return the Data received in response to the original request
+     * @throws InterruptedException if the current thread was interrupted while waiting
+     * @throws ExecutionException if an error occurred while making the request
+     */
     @Override
     public synchronized List<Data> get() throws InterruptedException, ExecutionException {
         while (!isDone()) {
@@ -94,6 +102,15 @@ class RequestReceiver implements Future<List<Data>> {
         return response;
     }
 
+    /**
+     * Wait for the specified amount of time for the request to complete.
+     * @param duration the amount of time to wait
+     * @param timeUnit the unit interval of time in which duration is specified
+     * @return the Data received in response to the original request
+     * @throws InterruptedException if the current thread was interrupted while waiting
+     * @throws ExecutionException if an error occurred while making the request
+     * @throws TimeoutException if the request did not complete in the specified time
+     */
     @Override
     public synchronized List<Data> get(long duration, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
         while (!isDone()) {
@@ -109,16 +126,31 @@ class RequestReceiver implements Future<List<Data>> {
         return response;
     }
 
+    /**
+     * Returns true if this request was cancelled before it completed normally.
+     * @return true if the request was cancelled before it completed
+     */
     @Override
     public synchronized boolean isCancelled() {
         return status == RequestStatus.CANCELLED;
     }
 
+    /**
+     * Returns true if this request is completed, due either to cancellation, normal
+     * termination, or an ExecutionException
+     * @return true if the request is completed
+     */
     @Override
     public synchronized boolean isDone() {
         return status != RequestStatus.PENDING;
     }
 
+    /**
+     * Set the result of this request.  Depending on whether the response
+     * packet contains error records, this may result in either successful
+     * completion, or in failure and an ExecutionException being created.
+     * @param packet the LabRAD response packet received for this request
+     */
     protected synchronized void set(Packet packet) {
         if (!isCancelled()) {
             boolean failed = false;
@@ -144,13 +176,20 @@ class RequestReceiver implements Future<List<Data>> {
         notifyAll();
     }
 
+    /**
+     * Record the failure of this request.
+     * @param theCause
+     */
     protected synchronized void fail(Throwable theCause) {
-        cause = theCause;
         status = RequestStatus.FAILED;
+        cause = theCause;
         callbackFailure();
         notifyAll();
     }
 
+    /**
+     * Trigger the onSuccess callback of this request.
+     */
     private void callbackSuccess() {
         doCallback(new Runnable() {
             @Override
@@ -160,6 +199,9 @@ class RequestReceiver implements Future<List<Data>> {
         });
     }
 
+    /**
+     * Trigger the onFailure callback of this request.
+     */
     private void callbackFailure() {
         doCallback(new Runnable() {
             @Override
@@ -169,6 +211,11 @@ class RequestReceiver implements Future<List<Data>> {
         });
     }
 
+    /**
+     * Dispatch a callback by scheduling it to be invoked later.
+     * We use the standard SwingUtilities.invokeLater mechanism to do this.
+     * @param runnable the object to schedule for running by the event loop
+     */
     private void doCallback(Runnable runnable) {
         if (callback != null) {
             SwingUtilities.invokeLater(runnable);

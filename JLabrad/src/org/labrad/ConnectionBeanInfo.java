@@ -75,15 +75,17 @@ public class ConnectionBeanInfo extends SimpleBeanInfo {
         return properties;     }//GEN-LAST:Properties
 
     // EventSet identifiers//GEN-FIRST:Events
-    private static final int EVENT_messageListener = 0;
-    private static final int EVENT_propertyChangeListener = 1;
+    private static final int EVENT_connectionListener = 0;
+    private static final int EVENT_messageListener = 1;
+    private static final int EVENT_propertyChangeListener = 2;
 
     // EventSet array
     /*lazy EventSetDescriptor*/
     private static EventSetDescriptor[] getEdescriptor(){
-        EventSetDescriptor[] eventSets = new EventSetDescriptor[2];
+        EventSetDescriptor[] eventSets = new EventSetDescriptor[3];
     
         try {
+            eventSets[EVENT_connectionListener] = new EventSetDescriptor ( org.labrad.Connection.class, "connectionListener", org.labrad.events.ConnectionListener.class, new String[] {"connected", "disconnected"}, "addConnectionListener", "removeConnectionListener" ); // NOI18N
             eventSets[EVENT_messageListener] = new EventSetDescriptor ( org.labrad.Connection.class, "messageListener", org.labrad.events.MessageListener.class, new String[] {"messageReceived"}, "addMessageListener", "removeMessageListener" ); // NOI18N
             eventSets[EVENT_propertyChangeListener] = new EventSetDescriptor ( org.labrad.Connection.class, "propertyChangeListener", java.beans.PropertyChangeListener.class, new String[] {"propertyChange"}, "addPropertyChangeListener", "removePropertyChangeListener" ); // NOI18N
         }

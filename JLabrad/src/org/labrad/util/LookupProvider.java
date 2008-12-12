@@ -17,8 +17,9 @@
  * along with JLabrad.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.labrad;
+package org.labrad.util;
 
+import org.labrad.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -87,7 +88,7 @@ public class LookupProvider {
 	 * @throws InterruptedException
 	 */
 	public void doLookups(Request request)
-			throws InterruptedException, ExecutionException, IOException {
+			throws InterruptedException, ExecutionException {
 		// lookup server ID
 		if (request.needsServerLookup()) {
 			Long serverID = serverCache.get(request.getServerName());
@@ -136,7 +137,7 @@ public class LookupProvider {
      * @throws InterruptedException
      */
     private long lookupServer(String server)
-    		throws IOException, InterruptedException, ExecutionException {
+    		throws InterruptedException, ExecutionException {
 	    Request request = new Request(Constants.MANAGER);
 	    request.add(Constants.LOOKUP, Data.valueOf(server));
     	Data response = connection.sendAndWait(request).get(0);
@@ -159,7 +160,7 @@ public class LookupProvider {
      * @throws InterruptedException
      */
     private List<Long> lookupSettings(long serverID, List<String> settings)
-            throws IOException, InterruptedException, ExecutionException {
+            throws InterruptedException, ExecutionException {
     	Data data = new Data("w*s");
     	data.get(0).setWord(serverID);
     	data.get(1).setStringList(settings);

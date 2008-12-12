@@ -19,6 +19,8 @@
 
 package org.labrad;
 
+import org.labrad.util.Util;
+import org.labrad.util.LookupProvider;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
@@ -367,8 +369,6 @@ public class Connection implements Serializable {
                 response = sendAndWait(new Request(mgr).add(0, data)).get(0);
             } catch (ExecutionException ex) {
                 throw new IncorrectPasswordException();
-            } catch (IOException ex) {
-                throw new IncorrectPasswordException();
             }
 
             // print welcome message
@@ -491,7 +491,7 @@ public class Connection implements Serializable {
      * @throws IOException if a network error occurred
      */
     public List<Data> sendAndWait(Request request)
-    		throws InterruptedException, ExecutionException, IOException {
+    		throws InterruptedException, ExecutionException {
     	return send(request).get();
     }
 
@@ -504,7 +504,7 @@ public class Connection implements Serializable {
      * @param records
      */
     public void sendMessage(final Request request)
-            throws InterruptedException, ExecutionException, IOException {
+            throws InterruptedException, ExecutionException {
         lookupProvider.doLookups(request);
         sendMessageWithoutLookups(request);
     }
@@ -579,6 +579,7 @@ public class Connection implements Serializable {
                    IOException, ExecutionException, InterruptedException {
         Data response;
         long start, end;
+        int nEcho = 5;
         int nRandomData = 1000;
         int nPings = 10000;
         
@@ -597,8 +598,8 @@ public class Connection implements Serializable {
         // echo with delays
         System.out.println("echo with delays...");
         start = System.currentTimeMillis();
-        for (int i = 0; i < 5; i++) {
-        	requests.add(c.send(new Request(server).add("Delayed Echo", new Data("w").setWord(4))));
+        for (int i = 0; i < nEcho; i++) {
+        	requests.add(c.send(new Request(server).add("Delayed Echo", Data.valueOf(4L))));
         }
         for (Future<List<Data>> request : requests) {
         	request.get();

@@ -32,7 +32,16 @@ public class Request {
 	private Context context;
     private List<Record> records;
      
-    
+
+    public static Request to(String target) { return new Request(target); }
+    public static Request to(long targetID) { return new Request(targetID); }
+    public static Request to(String target, Context context) {
+        return new Request(target, context);
+    }
+    public static Request to(long targetID, Context context) {
+        return new Request(targetID, context);
+    }
+
     // constructors
     public Request(String target) { this(target, Constants.DEFAULT_CONTEXT); }
     public Request(long targetID) { this(targetID, Constants.DEFAULT_CONTEXT); }
