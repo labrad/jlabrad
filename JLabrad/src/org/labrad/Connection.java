@@ -39,6 +39,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.labrad.data.Context;
 import org.labrad.data.Data;
 import org.labrad.data.Packet;
@@ -47,6 +49,8 @@ import org.labrad.data.PacketOutputStream;
 import org.labrad.data.Record;
 import org.labrad.data.Request;
 import org.labrad.errors.IncorrectPasswordException;
+import org.labrad.errors.LoginFailedException;
+import org.labrad.errors.LookupFailedException;
 import org.labrad.events.ConnectionListener;
 import org.labrad.events.ConnectionListenerSupport;
 import org.labrad.events.MessageListener;
@@ -61,8 +65,29 @@ public class Connection implements Serializable {
 	/** Version for serialization. */
 	private static final long serialVersionUID = 1L;
 
+    /** The default name used for this connection to LabRAD. */
 	private static final String DEFAULT_NAME = "Java Client";
-    
+
+
+    /**
+     * Create a new connection object.
+     * Properties such as host, port and password will be initialized
+     * from environment variable, if these have been set.  Otherwise,
+     * default values will be used.
+     */
+    public Connection() {
+    	setName(DEFAULT_NAME);
+
+        // set defaults from the environment
+    	setHost(Util.getEnv("LABRADHOST", Constants.DEFAULT_HOST));
+        setPort(Util.getEnvInt("LABRADPORT", Constants.DEFAULT_PORT));
+    	setPassword(Util.getEnv("LABRADPASSWORD", Constants.DEFAULT_PASSWORD));
+
+        // start disconnected
+    	connected = false;
+    }
+
+
 	// properties
 	private String name;
     private String host;
@@ -72,53 +97,98 @@ public class Connection implements Serializable {
     private String loginMessage;
     private boolean connected = false;
 
-    public String getName() { return name; }
+
+    /**
+     * Get the name used for this connection.
+     * @return the connection name
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * Set the name to be used for this connection.
+     * @param the connection name
+     */
     public void setName(String name) {
     	this.name = name;
     }
-    
+
+
     /**
-	 * @return the host
+	 * @return the hostname to use for the connection
 	 */
-	public String getHost() { return host; }
+	public String getHost() {
+        return host;
+    }
+    /**
+     * Set the host to use for the connection to LabRAD.
+     * @param host
+     */
     public void setHost(String host) {
     	this.host = host;
     }
 
+
 	/**
-	 * @return the port
+	 * @return the port to use for the connection
 	 */
-	public int getPort() { return port; }
+	public int getPort() {
+        return port;
+    }
+    /**
+     * Set the port to use for the connection to LabRAD.
+     * @param port
+     */
 	public void setPort(int port) {
 		this.port = port;
 	}
 
-	
+
+	/**
+     * Set the password to use for the connection to LabRAD.
+     * @param password
+     */
 	public void setPassword(String password) {
 		this.password = password;
 	}
 	
 
 	/**
+     * Get the ID assigned by the manager after connecting to LabRAD.
 	 * @return the iD
 	 */
 	public long getID() {
 		return ID;
 	}
-	
+
+
 	/**
-	 * Get the welcome message returned by the manager when we connected.
-	 * @return
+	 * Get the welcome message returned by the manager
+     * after connecting to LabRAD.
+	 * @return the login massage
 	 */
-	public String getLoginMessage() { return loginMessage; }
-    
+	public String getLoginMessage() {
+        return loginMessage;
+    }
+
+    private void setLoginMessage(String message) {
+        loginMessage = message;
+    }
+
+
+    /**
+     * Indicates whether we are connected to LabRAD.
+     * @return a boolean indicating the connection status
+     */
 	public boolean isConnected() {
 		return connected;
 	}
+
 	private void setConnected(boolean connected) {
         boolean old = this.connected;
         this.connected = connected;
-        pcs.firePropertyChange("connected", old, connected);
+        propertyChangeListeners.firePropertyChange("connected", old, connected);
         if (connected) {
             connectionListeners.fireConnected();
         } else {
@@ -126,35 +196,65 @@ public class Connection implements Serializable {
         }
 	}
 
+
     // events
-    private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
-    private final MessageListenerSupport mls = new MessageListenerSupport(this);
+    private final PropertyChangeSupport propertyChangeListeners =
+                    new PropertyChangeSupport(this);
+    private final MessageListenerSupport messageListeners =
+                    new MessageListenerSupport(this);
     private final ConnectionListenerSupport connectionListeners =
-                      new ConnectionListenerSupport(this);
+                    new ConnectionListenerSupport(this);
 
+    /**
+     * Add a listener for property change events.
+     * @param listener
+     */
     public void addPropertyChangeListener(PropertyChangeListener listener) {
-        pcs.addPropertyChangeListener(listener);
+        propertyChangeListeners.addPropertyChangeListener(listener);
     }
 
+    /**
+     * Remove a listener for property change events.
+     * @param listener
+     */
     public void removePropertyChangeListener(PropertyChangeListener listener) {
-        pcs.removePropertyChangeListener(listener);
+        propertyChangeListeners.removePropertyChangeListener(listener);
     }
 
+
+    /**
+     * Add a listener for LabRAD message events.
+     * @param listener
+     */
     public void addMessageListener(MessageListener listener) {
-        mls.addListener(listener);
+        messageListeners.addListener(listener);
     }
 
+    /**
+     * Remove a listener for LabRAD message events.
+     * @param listener
+     */
     public void removeMessageListener(MessageListener listener) {
-        mls.removeListener(listener);
+        messageListeners.removeListener(listener);
     }
 
+
+    /**
+     * Add a listener for connection events.
+     * @param listener
+     */
     public void addConnectionListener(ConnectionListener listener) {
         connectionListeners.addListener(listener);
     }
 
+    /**
+     * Remove a listener for connection events.
+     * @param listener
+     */
     public void removeConnectionListener(ConnectionListener listener) {
         connectionListeners.removeListener(listener);
     }
+
 
 	// networking stuff
     private Socket socket;
@@ -162,157 +262,151 @@ public class Connection implements Serializable {
     private PacketInputStream inputStream;
     private PacketOutputStream outputStream;
     private BlockingQueue<Packet> writeQueue;
-    
-    /** Low word of next context that will be created. */
-	private Long nextContext = 1L;
         
     /** Request IDs that are available to be reused. */
     private RequestDispatcher requestDispatcher;
-    
+
+    /** Thread pool for handling lookups. */
+    private ExecutorService executor = Executors.newCachedThreadPool();
+
     /** Performs server and method lookups. */
-    private ExecutorService lookupService = Executors.newCachedThreadPool();
-    
-    /** Maps server names to IDs. */
-    private ConcurrentMap<String, Long> serverCache = new ConcurrentHashMap<String, Long>();
-    
-    /** Maps server IDs to a map from setting names to IDs. */
-    private ConcurrentMap<Long, ConcurrentMap<String, Long>> settingCache =
-    	new ConcurrentHashMap<Long, ConcurrentMap<String, Long>>();
-    
-    /**
-     * Create a new connection object.
-     */
-    public Connection() {
-    	setName(DEFAULT_NAME);
-    	// set defaults from the environment
-    	setHost(Util.getEnv("LABRADHOST", Constants.DEFAULT_HOST));
-        setPort(Util.getEnvInt("LABRADPORT", Constants.DEFAULT_PORT));
-    	setPassword(Util.getEnv("LABRADPASSWORD", Constants.DEFAULT_PASSWORD));
-    	// always start in the disconnected state
-    	setConnected(false);
-    }
+    private LookupProvider lookupProvider = new LookupProvider(this);
+
     
     /**
      * Connect to the LabRAD manager.
-     * @throws UnknownHostException
-     * @throws IOException
-     * @throws ExecutionException
-     * @throws InterruptedException
-     * @throws IncorrectPasswordException
+     * @throws UnknownHostException if the host and port are not valid
+     * @throws IOException if a network error occurred
+     * @throws IncorrectPasswordException if the password was not correct
+     * @throws LoginFailedException if the login failed for some other reason
      */
     public void connect()
-    		throws UnknownHostException, IOException, ExecutionException,
-				   InterruptedException, IncorrectPasswordException {
-        // TODO: clean up exceptions thrown here
-        // TODO: try/catch around login with close called on an exception
-	    socket = new Socket(host, port);
-	    socket.setTcpNoDelay(true);
-	    socket.setKeepAlive(true);
-	    inputStream = new PacketInputStream(socket.getInputStream());
-	    outputStream = new PacketOutputStream(socket.getOutputStream());
-	
-	    writeQueue = new LinkedBlockingQueue<Packet>();
+    		throws UnknownHostException, IOException,
+                   LoginFailedException, IncorrectPasswordException {
+        socket = new Socket(host, port);
+        socket.setTcpNoDelay(true);
+        socket.setKeepAlive(true);
+        inputStream = new PacketInputStream(socket.getInputStream());
+        outputStream = new PacketOutputStream(socket.getOutputStream());
+
+        writeQueue = new LinkedBlockingQueue<Packet>();
         requestDispatcher = new RequestDispatcher(writeQueue);
-	
-	    reader = new Thread(new Runnable() {
+
+        reader = new Thread(new Runnable() {
             @Override public void run() {
-	            try {
-	                while (!Thread.interrupted())
-	                    handlePacket(inputStream.readPacket());
-	            } catch (IOException e) {
-	            	// let the client know that we have disconnected.
-	            	if (!Thread.interrupted())
-	            		close(e);
-	            }
-	        }
-	    }, "Packet Reader Thread");
-	    
-	    writer = new Thread(new Runnable() {
-	    	@Override public void run() {
-	            try {
-	                while (true) {
-	                    Packet p = writeQueue.take();
-	                    outputStream.writePacket(p);
-	                }
-	            } catch (InterruptedException e) {
-	            	// this happens when the connection is closed.
-	            } catch (IOException e) {
-	            	// let the client know that we have disconnected.
-	            	close(e);
-	            }
-	        }
-	    }, "Packet Writer Thread");
-	    
-	    reader.start();
-	    writer.start();
-	    
-	    try {
-	    	connected = true; // set this so that login requests will complete
-	    	doLogin(password);
-	    } finally {
-	    	connected = false;
-	    }
-	    setConnected(true);
+                try {
+                    while (!Thread.interrupted())
+                        handlePacket(inputStream.readPacket());
+                } catch (IOException e) {
+                    // let the client know that we have disconnected.
+                    if (!Thread.interrupted())
+                        close(e);
+                }
+            }
+        }, "Packet Reader Thread");
+
+        writer = new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    while (true) {
+                        Packet p = writeQueue.take();
+                        outputStream.writePacket(p);
+                    }
+                } catch (InterruptedException e) {
+                    // this happens when the connection is closed.
+                } catch (IOException e) {
+                    // let the client know that we have disconnected.
+                    close(e);
+                }
+            }
+        }, "Packet Writer Thread");
+
+        reader.start();
+        writer.start();
+
+        try {
+            connected = true; // set this so that login requests will complete
+            doLogin(password);
+        } finally {
+            connected = false;
+        }
+        setConnected(true);
 	}
 
     
     /**
 	 * Logs in to LabRAD using the standard protocol.
 	 * @param password
-	 * @throws InterruptedException
-	 * @throws ExecutionException
-	 * @throws NoSuchAlgorithmException
-	 * @throws IncorrectPasswordException 
-	 * @throws IOException 
+	 * @throws IncorrectPasswordException if the password was not correct
+	 * @throws LoginFailedException if the login failed for some other reason
 	 */
 	private void doLogin(String password)
-			throws InterruptedException, ExecutionException,
-			IncorrectPasswordException, IOException {
+			throws LoginFailedException, IncorrectPasswordException {
 		long mgr = Constants.MANAGER;
 		Data data, response;
 	    
-	    // send first ping packet
-	    response = sendAndWait(new Request(mgr)).get(0);
-	    
-	    // get password challenge
-	    MessageDigest md;
 	    try {
-	    	md = MessageDigest.getInstance("MD5");
-	    } catch (NoSuchAlgorithmException e) {
-	    	// TODO provide fallback MD5 hash implementation
-	    	throw new RuntimeException("MD5 hash not supported.");
-	    }
-	    byte[] challenge = response.getBytes();
-	    md.update(challenge);
-	    md.update(password.getBytes(Data.STRING_ENCODING));
-	
-	    // send password response
-	    try {
-	    	data = Data.valueOf(md.digest());
-	    	response = sendAndWait(new Request(mgr).add(0, data)).get(0);
-	    } catch (ExecutionException e) {
-	    	throw new IncorrectPasswordException();
-	    }
-	    
-	    // print welcome message
-	    loginMessage = response.getString();
-	    System.out.println(loginMessage);
-	
-	    // send identification packet
-	    data = new Data("ws").setWord(Constants.PROTOCOL, 0).setString(name, 1);
-	    response = sendAndWait(new Request(mgr).add(0, data)).get(0);
-	    ID = response.getWord();
+            // send first ping packet
+            response = sendAndWait(new Request(mgr)).get(0);
+
+            // get password challenge
+            MessageDigest md;
+            try {
+                md = MessageDigest.getInstance("MD5");
+            } catch (NoSuchAlgorithmException e) {
+                // TODO provide fallback MD5 hash implementation
+                throw new RuntimeException("MD5 hash not supported.");
+            }
+            byte[] challenge = response.getBytes();
+            md.update(challenge);
+            md.update(password.getBytes(Data.STRING_ENCODING));
+
+            // send password response
+            try {
+                data = Data.valueOf(md.digest());
+                response = sendAndWait(new Request(mgr).add(0, data)).get(0);
+            } catch (ExecutionException ex) {
+                throw new IncorrectPasswordException();
+            } catch (IOException ex) {
+                throw new IncorrectPasswordException();
+            }
+
+            // print welcome message
+            setLoginMessage(response.getString());
+
+            // send identification packet
+            data = new Data("ws").setWord(Constants.PROTOCOL, 0).setString(name, 1);
+            response = sendAndWait(new Request(mgr).add(0, data)).get(0);
+            ID = response.getWord();
+        } catch (InterruptedException ex) {
+            throw new LoginFailedException(ex);
+        } catch (ExecutionException ex) {
+            throw new LoginFailedException(ex);
+        } catch (IOException ex) {
+            throw new LoginFailedException(ex);
+        }
 	}
-	
+
+
+    /**
+	 * Closes the network connection to LabRAD.
+	 */
+	public void close() {
+		close(new IOException("Connection closed."));
+	}
+
 
 	/**
 	 * Closes the connection to LabRAD after an error.
 	 * @param cause
 	 */
 	private synchronized void close(Throwable cause) {
-		if (connected) {
+		if (isConnected()) {
+            // set our status as closed
+            setConnected(false);
+
 			// shutdown the lookup service
-			lookupService.shutdownNow();
+			executor.shutdown();
 			
 			// cancel all pending requests
             requestDispatcher.failAll(cause);
@@ -333,121 +427,124 @@ public class Connection implements Serializable {
 			try {
 				reader.join();
 			} catch (InterruptedException e) {}
-			
-			connected = false;
 		}
 	}
-
-
-	/**
-	 * Closes the network connection to LabRAD.
-	 */
-	public void close() {
-		close(new IOException("Connection closed."));
-	}
 	
-	
+
+    /** Low word of next context that will be created. */
+	private long nextContext = 1L;
+    private final Object contextLock = new Object();
+
 	/**
 	 * Create a new context for this connection.
 	 * @return
 	 */
 	public Context newContext() {
-    	synchronized (nextContext) {
+    	synchronized (contextLock) {
     		return new Context(0, nextContext++);
     	}
     }
-
-	
-	// Message functions
-    
-    /**
-     * Sends a LabRAD message to the specified server.
-     * @param server
-     * @param records
-     */
-    public synchronized void sendMessage(Request request) {
-    	// TODO: do lookups before sending a message
-    	if (!connected) {
-    		throw new RuntimeException("not connected!");
-    	}
-    	writeQueue.add(Packet.forMessage(request));
-    }
 	
 	
-    // Request functions
-    
 	/**
-	 * 
-	 * @param server
-	 * @param records
-	 * @return
-	 * @throws IOException
+	 * Send a LabRAD request.
+	 * @param request the request that will be made
+	 * @return a Future that returns a list of Data when the request is done
 	 */
-	public Future<List<Data>> send(final Request request)
-			throws IOException {
+	public Future<List<Data>> send(final Request request) {
 	    return send(request, null);
     }
 
     /**
-     * Send a request with an explicit callback.
-     * @param request
-     * @param callback
-     * @return
-     * @throws java.io.IOException
+     * Send a request with an explicit callback.  When the request is
+     * completed, the callback will be dispatched using the
+     * EventQueue.invokeLater mechanism.
+     * @param request the request that will be made
+     * @param callback provides methods that will be called when done
+     * @return a Future that returns a list of Data when the request is done
      */
-    public Future<List<Data>> send(final Request request, final RequestCallback callback)
-            throws IOException {
-        doLookupsFromCache(request);
+    public Future<List<Data>> send(final Request request, final RequestCallback callback) {
+        Future<List<Data>> result;
+        lookupProvider.doLookupsFromCache(request);
 		if (request.needsLookup()) {
-	    	return lookupService.submit(new Callable<List<Data>>() {
+	    	result = executor.submit(new Callable<List<Data>>() {
 				@Override
 				public List<Data> call() throws Exception {
-					doLookups(request);
+					lookupProvider.doLookups(request);
 					return sendWithoutLookups(request, callback).get();
 				}
 	    	});
 		} else {
-			return sendWithoutLookups(request, callback);
+			result = sendWithoutLookups(request, callback);
 		}
+        return result;
     }
-	
+
+
 	/**
      * Makes a LabRAD request synchronously.  The request is sent over LabRAD and the
      * calling thread will block until the result is available.
-     * @param server
-     * @param records
-     * @return
-     * @throws InterruptedException
-     * @throws ExecutionException
-     * @throws IOException 
+     * @param request the request that will be sent
+     * @return a list of Data, one for each record in the request
+     * @throws InterruptedException if the network thread was interrupted
+     * @throws ExecutionException if the request returned an error or was canceled
+     * @throws IOException if a network error occurred
      */
     public List<Data> sendAndWait(Request request)
     		throws InterruptedException, ExecutionException, IOException {
     	return send(request).get();
     }
-	
+
+
+    /**
+     * Sends a LabRAD message to the specified server.  In this case,
+     * lookups are done synchronously so that any exceptions will
+     * be thrown to the caller immediately.
+     * @param server
+     * @param records
+     */
+    public void sendMessage(final Request request)
+            throws InterruptedException, ExecutionException, IOException {
+        lookupProvider.doLookups(request);
+        sendMessageWithoutLookups(request);
+    }
+
     
 	/**
 	 * Makes a LabRAD request asynchronously.  The request is sent over LabRAD and an
 	 * object is returned that can be queried to see if the request has completed or
 	 * to wait for completion.
-	 * @param server
-	 * @param records
+	 * @param request the request that will be sent
+	 * @param callback an optional callback to be invoked on completion
+     * @throws RuntimeException if not connected or IDs not looked up
 	 */
-	private synchronized Future<List<Data>>
-            sendWithoutLookups(final Request request,
-                               final RequestCallback callback)
-                throws IOException {
+	private Future<List<Data>> sendWithoutLookups(
+            final Request request, final RequestCallback callback) {
 		if (!isConnected()) {
-			throw new IOException("not connected.");
+			throw new RuntimeException("Not connected.");
 		}
 		if (request.needsLookup()) {
 			throw new RuntimeException("Server and/or setting IDs not looked up!");
 		}
-	    return requestDispatcher.startRequest(request);
+	    return requestDispatcher.startRequest(request, callback);
 	}
 
-	
+	/**
+     * Sends a LabRAD message without making any lookup requests.
+     * @param request the request that will be made
+     * @throws RuntimeException if not connected or IDs not looked up
+     */
+    private void sendMessageWithoutLookups(final Request request) {
+        if (!isConnected()) {
+    		throw new RuntimeException("Not connected.");
+    	}
+        if (request.needsLookup()) {
+            throw new RuntimeException("Server and/or setting IDs not looked up!");
+        }
+        writeQueue.add(Packet.forMessage(request));
+    }
+
+
 	/**
      * Handle packets coming in from the wire.
      * @param packet
@@ -459,159 +556,31 @@ public class Connection implements Serializable {
             requestDispatcher.finishRequest(packet);
         } else if (request == 0) {
         	// handle incoming message
-            mls.fireMessage(packet);
+            messageListeners.fireMessage(packet);
         } else {
         	// handle incoming request
         }
     }
-	
-	
-	// functions used by the lookup service
-	
-	/**
-	 * Attempt to do necessary server/setting lookups from the local cache only.
-	 * @param request
-	 */
-	private void doLookupsFromCache(Request request) {
-		// lookup server ID
-		if (request.needsServerLookup()) {
-			Long serverID = serverCache.get(request.getServerID());
-			if (serverID != null) {
-				request.setServerID(serverID);
-			}
-		}
-		// lookup setting IDs if server ID lookup succeeded
-		if (!request.needsServerLookup() && request.needsSettingLookup()) {
-			ConcurrentMap<String, Long> cache = settingCache.get(request.getServerID());
-			if (cache != null) {
-				for (Record r : request.getRecords()) {
-					if (r.needsLookup()) {
-						Long settingID = cache.get(r.getName());
-						if (settingID != null) {
-							r.setID(settingID);
-						}
-					}
-				}
-			}
-		}
-	}
-	
-	
-	/**
-	 * Do necessary server/setting lookups, making requests to the manager as necessary.
-	 * @param request
-	 * @throws IOException 
-	 * @throws ExecutionException 
-	 * @throws InterruptedException 
-	 */
-	private void doLookups(Request request)
-			throws InterruptedException, ExecutionException, IOException {
-		// lookup server ID
-		if (request.needsServerLookup()) {
-			Long serverID = serverCache.get(request.getServerID());
-			if (serverID == null) {
-				serverID = lookupServer(request.getServerName());
-			}
-			request.setServerID(serverID);
-		}
-		// lookup setting IDs
-		if (request.needsSettingLookup()) {
-			List<Record> lookups = new ArrayList<Record>();
-			ConcurrentMap<String, Long> cache = settingCache.get(request.getServerID());
-			if (cache != null) {
-				for (Record r : request.getRecords()) {
-					if (r.needsLookup()) {
-						Long settingID = cache.get(r.getName());
-						if (settingID != null) {
-							r.setID(settingID);
-						} else {
-							lookups.add(r);
-						}
-					}
-				}
-			}
-			if (lookups.size() > 0) {
-				List<String> names = new ArrayList<String>();
-				for (Record r : lookups) {
-					names.add(r.getName());
-				}
-				List<Long> IDs = lookupSettings(request.getServerID(), names);
-				for (int i = 0; i < lookups.size(); i++) {
-					lookups.get(i).setID(IDs.get(i));
-				}
-			}
-		}
-	}
-	
-	
-    /**
-     * Lookup the ID of a server, pulling from the cache if we already know it.
-     * The looked up ID is stored in the local cache for future use.
-     * @param server
-     * @return
-     * @throws IOException
-     * @throws ExecutionException 
-     * @throws InterruptedException
-     */
-    private long lookupServer(String server)
-    		throws IOException, InterruptedException, ExecutionException {
-	    Request request = new Request(Constants.MANAGER);
-	    request.add(Constants.LOOKUP, new Data("s").setString(server));
-    	long serverID = sendAndWait(request).get(0).getWord();
-        serverCache.putIfAbsent(server, serverID);
-        settingCache.putIfAbsent(serverID, new ConcurrentHashMap<String, Long>());
-    	return serverID;
-    }
-    
-    
-    /**
-     * Lookup IDs for a list of settings on the specified server.  All the setting
-     * IDs are stored in the local cache for future use.
-     * @param serverID
-     * @param settings
-     * @return
-     * @throws IOException
-     * @throws ExecutionException 
-     * @throws InterruptedException 
-     */
-    private List<Long> lookupSettings(long serverID, List<String> settings)
-            throws IOException, InterruptedException, ExecutionException {
-    	// TODO: may need to do an s*s lookup if cache has been invalidated in the meantime.
-    	// TODO: maybe need to implement the cache as an opaque object.
-    	Data data = new Data("w*s");
-    	data.get(0).setWord(serverID);
-    	data.get(1).setStringList(settings);
-    	Request request = new Request(Constants.MANAGER);
-    	request.add(Constants.LOOKUP, data);
-    	ConcurrentMap<String, Long> cache = settingCache.get(serverID);
-    	Data response = sendAndWait(request).get(0);
-    	List<Long> result = response.get(1).getWordList();
-    	// cache all the lookup results
-    	for (int i = 0; i < settings.size(); i++) {
-    		cache.put(settings.get(i), result.get(i));
-    	}
-    	return result;
-    }
-    
+
     
     /**
      * Tests some of the basic functionality of the client connection.
      * This method requires that the "Python Test Server" be running
      * to complete all of its tests successfully.
      * @param args
-     * @throws IOException
      * @throws IncorrectPasswordException
+     * @throws LoginFailedException
+     * @throws IOException
      * @throws ExecutionException
      * @throws InterruptedException
-     * @throws NoSuchAlgorithmException
      */
     public static void main(String[] args)
-    		throws IOException, IncorrectPasswordException, ExecutionException, InterruptedException,
-    		       NoSuchAlgorithmException {
+    		throws IncorrectPasswordException, LoginFailedException,
+                   IOException, ExecutionException, InterruptedException {
         Data response;
         long start, end;
-        int nRandomData = 100;
-        int nPings = 1000;
+        int nRandomData = 1000;
+        int nPings = 10000;
         
         String server = "Python Test Server";
         String setting = "Get Random Data";
@@ -620,9 +589,6 @@ public class Connection implements Serializable {
         
         // connect to LabRAD
         Connection c = new Connection();
-        c.setHost("localhost");
-        c.setPort(7682);
-        c.setPassword("martinisgroup");
         c.connect();
                 
         // set delay to 1 second

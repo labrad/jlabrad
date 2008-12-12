@@ -32,19 +32,19 @@ public class Constants {
     public static final String DEFAULT_PASSWORD = "";
 
 	/** ID of the LabRAD manager. */
-	public static final long MANAGER = 1;
+	public static final long MANAGER = 1L;
 	
 	/** ID of the manager setting to retrieve a list of servers. */
-	public static final long SERVERS = 1;
+	public static final long SERVERS = 1L;
 	
 	/** ID of the manager setting to retrieve a settings list for a server. */
-	public static final long SETTINGS = 2;
+	public static final long SETTINGS = 2L;
 
 	/** ID of the lookup setting on the manager. */
-	public static final long LOOKUP = 3;
+	public static final long LOOKUP = 3L;
 	
 	/** Version number of the LabRAD protocol version implemented here. */
-	public static final long PROTOCOL = 1;
+	public static final long PROTOCOL = 1L;
 	
 	/** Default context in which requests will be sent. */
 	public static final Context DEFAULT_CONTEXT = new Context(0, 0);
