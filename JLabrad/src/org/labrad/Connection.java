@@ -19,8 +19,6 @@
 
 package org.labrad;
 
-import org.labrad.util.Util;
-import org.labrad.util.LookupProvider;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
@@ -33,30 +31,26 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.labrad.data.Context;
 import org.labrad.data.Data;
 import org.labrad.data.Packet;
 import org.labrad.data.PacketInputStream;
 import org.labrad.data.PacketOutputStream;
-import org.labrad.data.Record;
 import org.labrad.data.Request;
 import org.labrad.errors.IncorrectPasswordException;
 import org.labrad.errors.LoginFailedException;
-import org.labrad.errors.LookupFailedException;
 import org.labrad.events.ConnectionListener;
 import org.labrad.events.ConnectionListenerSupport;
 import org.labrad.events.MessageListener;
 import org.labrad.events.MessageListenerSupport;
+import org.labrad.util.LookupProvider;
+import org.labrad.util.Util;
 
 /**
  * 
