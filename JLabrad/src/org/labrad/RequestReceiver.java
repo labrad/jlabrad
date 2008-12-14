@@ -51,17 +51,31 @@ class RequestReceiver implements Future<List<Data>> {
     private List<Data> response;
     private Throwable cause;
 
+    /**
+     * Create a receiver for the given request.
+     * @param request the LabRAD request that will be sent
+     */
     RequestReceiver(Request request) {
         this(request, null);
     }
 
+    /**
+     * Create a receiver for the given request with a callback
+     * to be called when completed.
+     * @param request the LabRAD request that will be sent
+     * @param callback to be called when the request completes or fails
+     */
     RequestReceiver(Request request, RequestCallback callback) {
         this.request = request;
         this.callback = callback;
     }
 
     /**
-     * Cancel this request.
+     * Cancel this request.  If mayInterruptIfRunning is true, this
+     * will immediately interrupt any threads waiting on this object,
+     * notifying them of the cancellation.  Note that this does not
+     * actually send any cancellation information to the server against
+     * whom the request was made.
      * @param mayInterruptIfRunning a boolean indicating whether
      * to interrupt threads that are waiting to get the result
      * @return true if the request was cancelled
