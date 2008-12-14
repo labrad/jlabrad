@@ -80,7 +80,6 @@ class RequestReceiver implements Future<List<Data>> {
      * to interrupt threads that are waiting to get the result
      * @return true if the request was cancelled
      */
-    @Override
     public synchronized boolean cancel(boolean mayInterruptIfRunning) {
         boolean cancelled = false;
         if (status == RequestStatus.PENDING) {
@@ -101,7 +100,6 @@ class RequestReceiver implements Future<List<Data>> {
      * @throws InterruptedException if the current thread was interrupted while waiting
      * @throws ExecutionException if an error occurred while making the request
      */
-    @Override
     public synchronized List<Data> get() throws InterruptedException, ExecutionException {
         while (!isDone()) {
             wait();
@@ -125,7 +123,6 @@ class RequestReceiver implements Future<List<Data>> {
      * @throws ExecutionException if an error occurred while making the request
      * @throws TimeoutException if the request did not complete in the specified time
      */
-    @Override
     public synchronized List<Data> get(long duration, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
         while (!isDone()) {
             wait(TimeUnit.MILLISECONDS.convert(duration, timeUnit));
@@ -144,7 +141,6 @@ class RequestReceiver implements Future<List<Data>> {
      * Returns true if this request was cancelled before it completed normally.
      * @return true if the request was cancelled before it completed
      */
-    @Override
     public synchronized boolean isCancelled() {
         return status == RequestStatus.CANCELLED;
     }
@@ -154,7 +150,6 @@ class RequestReceiver implements Future<List<Data>> {
      * termination, or an ExecutionException
      * @return true if the request is completed
      */
-    @Override
     public synchronized boolean isDone() {
         return status != RequestStatus.PENDING;
     }
@@ -206,7 +201,6 @@ class RequestReceiver implements Future<List<Data>> {
      */
     private void callbackSuccess() {
         doCallback(new Runnable() {
-            @Override
             public void run() {
                 callback.onSuccess(request, response);
             }
@@ -218,7 +212,6 @@ class RequestReceiver implements Future<List<Data>> {
      */
     private void callbackFailure() {
         doCallback(new Runnable() {
-            @Override
             public void run() {
                 callback.onFailure(request, cause);
             }

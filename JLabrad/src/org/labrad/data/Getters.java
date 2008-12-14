@@ -30,33 +30,33 @@ import org.labrad.types.Word;
 
 public class Getters {
 	public static Getter<Boolean> boolGetter = new Getter<Boolean>() {
-        @Override public Type getType() { return Bool.getInstance(); }
-		@Override public Boolean get(Data data) { return data.getBool(); }
+        public Type getType() { return Bool.getInstance(); }
+		public Boolean get(Data data) { return data.getBool(); }
 	};
 	public static Getter<Integer> intGetter = new Getter<Integer>() {
-		@Override public Type getType() { return Int.getInstance(); }
-		@Override public Integer get(Data data) { return data.getInt(); }
+		public Type getType() { return Int.getInstance(); }
+		public Integer get(Data data) { return data.getInt(); }
 	};
 	public static Getter<Long> wordGetter = new Getter<Long>() {
-		@Override public Type getType() { return Word.getInstance(); }
-		@Override public Long get(Data data) { return data.getWord(); }
+		public Type getType() { return Word.getInstance(); }
+		public Long get(Data data) { return data.getWord(); }
 	};
 	public static Getter<String> stringGetter = new Getter<String>() {
-		@Override public Type getType() { return Str.getInstance(); }
-		@Override public String get(Data data) { return data.getString(); }
+		public Type getType() { return Str.getInstance(); }
+		public String get(Data data) { return data.getString(); }
 	};
 	public static Getter<Date> dateGetter = new Getter<Date>() {
-		@Override public Type getType() { return Time.getInstance(); }
-		@Override public Date get(Data data) { return data.getTime(); }
+		public Type getType() { return Time.getInstance(); }
+		public Date get(Data data) { return data.getTime(); }
 	};
 	public static Getter<Double> valueGetter = new Getter<Double>() {
 		private final Type type = org.labrad.types.Value.of(null);
-		@Override public Type getType() { return type; }
-		@Override public Double get(Data data) { return data.getValue(); }
+		public Type getType() { return type; }
+		public Double get(Data data) { return data.getValue(); }
 	};
 	public static Getter<Complex> complexGetter = new Getter<Complex>() {
 		private final Type type = org.labrad.types.Value.of(null);
-		@Override public Type getType() { return type; }
-		@Override public Complex get(Data data) { return data.getComplex(); }
+		public Type getType() { return type; }
+		public Complex get(Data data) { return data.getComplex(); }
 	};
 }
