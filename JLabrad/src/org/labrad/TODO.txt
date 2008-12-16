@@ -2,7 +2,6 @@ JLabrad TODOs:
 
 Server
 - create server bean
-- create annotations to mark server methods
 - have connection bean fire RequestEvent
 
 Deployment

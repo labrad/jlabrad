@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 
+import org.labrad.Client;
 import org.labrad.Connection;
 import org.labrad.Constants;
 import org.labrad.data.Data;

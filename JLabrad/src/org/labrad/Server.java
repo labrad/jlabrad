@@ -19,14 +19,22 @@
 
 package org.labrad;
 
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Map;
+import org.labrad.data.Context;
+import org.labrad.data.Data;
 import org.labrad.events.ContextListener;
 import org.labrad.events.ContextListenerSupport;
+import org.labrad.types.Type;
 
 /**
  *
  * @author maffoo
  */
-public class Server {
+public class Server<T> {
+
+    private static final Type SETTING_REGISTRATION = Type.fromTag("wss*s*ss");
 
     // properties
     private String description;
@@ -39,12 +47,29 @@ public class Server {
     public void setNotes(String notes) { this.notes = notes; }
 
 
-    private ContextListenerSupport contextListeners = new ContextListenerSupport(this);
-    public void addContextListener(ContextListener listener) {
-        contextListeners.addListener(listener);
+    private ContextualServer<T> serverImpl;
+    private Map<Context, T> contexts;
+
+    public ContextualServer<T> getServerImpl() { return serverImpl; }
+    public void setServerImpl(ContextualServer<T> serverImpl) {
+        this.serverImpl = serverImpl;
     }
-    public void remoteContextListener(ContextListener listener) {
-        contextListeners.removeListener(listener);
+
+    public static void findSettings(Class<?> serverClass) {
+        for (Method m : serverClass.getMethods()) {
+            if (m.isAnnotationPresent(Setting.class)) {
+                System.out.println(m.getName() + " is remotely callable.");
+                Setting s = m.getAnnotation(Setting.class);
+                Data data = Data.ofType(SETTING_REGISTRATION);
+                data.get(0).setWord(s.ID());
+                data.get(1).setString(s.name());
+                data.get(2).setString(s.description());
+                data.get(3).setStringList(Arrays.asList(s.accepts()));
+                data.get(4).setStringList(Arrays.asList(s.returns()));
+                data.get(5).setString(s.notes());
+                System.out.println(data.pretty());
+            }
+        }
     }
 
 }

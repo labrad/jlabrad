@@ -30,12 +30,12 @@ import java.beans.SimpleBeanInfo;
  *
  * @author maffoo
  */
-public class ConnectionBeanInfo extends SimpleBeanInfo {
+public class ClientBeanInfo extends SimpleBeanInfo {
 
     // Bean descriptor//GEN-FIRST:BeanDescriptor
     /*lazy BeanDescriptor*/
     private static BeanDescriptor getBdescriptor(){
-        BeanDescriptor beanDescriptor = new BeanDescriptor  ( org.labrad.Connection.class , null ); // NOI18N//GEN-HEADEREND:BeanDescriptor
+        BeanDescriptor beanDescriptor = new BeanDescriptor  ( org.labrad.Client.class , null ); // NOI18N//GEN-HEADEREND:BeanDescriptor
 
     // Here you can add code for customizing the BeanDescriptor.
 
@@ -57,14 +57,14 @@ public class ConnectionBeanInfo extends SimpleBeanInfo {
         PropertyDescriptor[] properties = new PropertyDescriptor[7];
     
         try {
-            properties[PROPERTY_connected] = new PropertyDescriptor ( "connected", org.labrad.Connection.class, "isConnected", null ); // NOI18N
+            properties[PROPERTY_connected] = new PropertyDescriptor ( "connected", org.labrad.Client.class, "isConnected", null ); // NOI18N
             properties[PROPERTY_connected].setBound ( true );
-            properties[PROPERTY_host] = new PropertyDescriptor ( "host", org.labrad.Connection.class, "getHost", "setHost" ); // NOI18N
-            properties[PROPERTY_ID] = new PropertyDescriptor ( "ID", org.labrad.Connection.class, "getID", null ); // NOI18N
-            properties[PROPERTY_loginMessage] = new PropertyDescriptor ( "loginMessage", org.labrad.Connection.class, "getLoginMessage", null ); // NOI18N
-            properties[PROPERTY_name] = new PropertyDescriptor ( "name", org.labrad.Connection.class, "getName", "setName" ); // NOI18N
-            properties[PROPERTY_password] = new PropertyDescriptor ( "password", org.labrad.Connection.class, null, "setPassword" ); // NOI18N
-            properties[PROPERTY_port] = new PropertyDescriptor ( "port", org.labrad.Connection.class, "getPort", "setPort" ); // NOI18N
+            properties[PROPERTY_host] = new PropertyDescriptor ( "host", org.labrad.Client.class, "getHost", "setHost" ); // NOI18N
+            properties[PROPERTY_ID] = new PropertyDescriptor ( "ID", org.labrad.Client.class, "getID", null ); // NOI18N
+            properties[PROPERTY_loginMessage] = new PropertyDescriptor ( "loginMessage", org.labrad.Client.class, "getLoginMessage", null ); // NOI18N
+            properties[PROPERTY_name] = new PropertyDescriptor ( "name", org.labrad.Client.class, "getName", "setName" ); // NOI18N
+            properties[PROPERTY_password] = new PropertyDescriptor ( "password", org.labrad.Client.class, null, "setPassword" ); // NOI18N
+            properties[PROPERTY_port] = new PropertyDescriptor ( "port", org.labrad.Client.class, "getPort", "setPort" ); // NOI18N
         }
         catch(IntrospectionException e) {
             e.printStackTrace();
@@ -85,9 +85,9 @@ public class ConnectionBeanInfo extends SimpleBeanInfo {
         EventSetDescriptor[] eventSets = new EventSetDescriptor[3];
     
         try {
-            eventSets[EVENT_connectionListener] = new EventSetDescriptor ( org.labrad.Connection.class, "connectionListener", org.labrad.events.ConnectionListener.class, new String[] {"connected", "disconnected"}, "addConnectionListener", "removeConnectionListener" ); // NOI18N
-            eventSets[EVENT_messageListener] = new EventSetDescriptor ( org.labrad.Connection.class, "messageListener", org.labrad.events.MessageListener.class, new String[] {"messageReceived"}, "addMessageListener", "removeMessageListener" ); // NOI18N
-            eventSets[EVENT_propertyChangeListener] = new EventSetDescriptor ( org.labrad.Connection.class, "propertyChangeListener", java.beans.PropertyChangeListener.class, new String[] {"propertyChange"}, "addPropertyChangeListener", "removePropertyChangeListener" ); // NOI18N
+            eventSets[EVENT_connectionListener] = new EventSetDescriptor ( org.labrad.Client.class, "connectionListener", org.labrad.events.ConnectionListener.class, new String[] {"connected", "disconnected"}, "addConnectionListener", "removeConnectionListener" ); // NOI18N
+            eventSets[EVENT_messageListener] = new EventSetDescriptor ( org.labrad.Client.class, "messageListener", org.labrad.events.MessageListener.class, new String[] {"messageReceived"}, "addMessageListener", "removeMessageListener" ); // NOI18N
+            eventSets[EVENT_propertyChangeListener] = new EventSetDescriptor ( org.labrad.Client.class, "propertyChangeListener", java.beans.PropertyChangeListener.class, new String[] {"propertyChange"}, "addPropertyChangeListener", "removePropertyChangeListener" ); // NOI18N
         }
         catch(IntrospectionException e) {
             e.printStackTrace();
@@ -111,17 +111,17 @@ public class ConnectionBeanInfo extends SimpleBeanInfo {
         MethodDescriptor[] methods = new MethodDescriptor[6];
     
         try {
-            methods[METHOD_close0] = new MethodDescriptor(org.labrad.Connection.class.getMethod("close", new Class[] {})); // NOI18N
+            methods[METHOD_close0] = new MethodDescriptor(org.labrad.Client.class.getMethod("close", new Class[] {})); // NOI18N
             methods[METHOD_close0].setDisplayName ( "" );
-            methods[METHOD_connect1] = new MethodDescriptor(org.labrad.Connection.class.getMethod("connect", new Class[] {})); // NOI18N
+            methods[METHOD_connect1] = new MethodDescriptor(org.labrad.Client.class.getMethod("connect", new Class[] {})); // NOI18N
             methods[METHOD_connect1].setDisplayName ( "" );
-            methods[METHOD_newContext2] = new MethodDescriptor(org.labrad.Connection.class.getMethod("newContext", new Class[] {})); // NOI18N
+            methods[METHOD_newContext2] = new MethodDescriptor(org.labrad.Client.class.getMethod("newContext", new Class[] {})); // NOI18N
             methods[METHOD_newContext2].setDisplayName ( "" );
-            methods[METHOD_send3] = new MethodDescriptor(org.labrad.Connection.class.getMethod("send", new Class[] {org.labrad.data.Request.class})); // NOI18N
+            methods[METHOD_send3] = new MethodDescriptor(org.labrad.Client.class.getMethod("send", new Class[] {org.labrad.data.Request.class})); // NOI18N
             methods[METHOD_send3].setDisplayName ( "" );
-            methods[METHOD_sendAndWait4] = new MethodDescriptor(org.labrad.Connection.class.getMethod("sendAndWait", new Class[] {org.labrad.data.Request.class})); // NOI18N
+            methods[METHOD_sendAndWait4] = new MethodDescriptor(org.labrad.Client.class.getMethod("sendAndWait", new Class[] {org.labrad.data.Request.class})); // NOI18N
             methods[METHOD_sendAndWait4].setDisplayName ( "" );
-            methods[METHOD_sendMessage5] = new MethodDescriptor(org.labrad.Connection.class.getMethod("sendMessage", new Class[] {org.labrad.data.Request.class})); // NOI18N
+            methods[METHOD_sendMessage5] = new MethodDescriptor(org.labrad.Client.class.getMethod("sendMessage", new Class[] {org.labrad.data.Request.class})); // NOI18N
             methods[METHOD_sendMessage5].setDisplayName ( "" );
         }
         catch( Exception e) {}//GEN-HEADEREND:Methods

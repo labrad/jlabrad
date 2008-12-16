@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -173,7 +174,17 @@ public class Data implements Cloneable {
     public static Data valueOf(double re, double im, String units) {
     	return new Data("c[" + units + "]").setComplex(re, im);
     }
-    
+
+
+    // static constructors for specific types
+    public static Data ofType(String tag) {
+        return new Data(tag);
+    }
+
+    public static Data ofType(Type type) {
+        return new Data(type);
+    }
+
     /**
      * Construct a Data object for a given LabRAD type tag.
      * 
@@ -462,7 +473,7 @@ public class Data implements Cloneable {
                 Complex c = getComplex();
                 u = type.getUnits();
                 return Double.toString(c.getReal()) + (c.getImag() >= 0 ? "+" : "") + 
-                       Double.toString(c.getImag()) + (u != null ? " [" + u + "]" : "");
+                       Double.toString(c.getImag()) + "i" + (u != null ? " [" + u + "]" : "");
 
             case TIME: return getTime().toString();
             case STR: return '"' + getString() + '"';
@@ -496,15 +507,23 @@ public class Data implements Cloneable {
      */
     private String prettyList(int[] shape, int[] indices, int level) {
         String s = "";
-        for (int i = 0; i < shape[level]; i++) {
-            indices[level] = i;
-            if (level == shape.length - 1) {
-                s += ", " + get(indices).pretty();
-            } else {
-                s += ", " + prettyList(shape, indices, level + 1);
+        if (shape[level] > 0) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < shape[level]; i++) {
+                indices[level] = i;
+                if (level == shape.length - 1) {
+                    if (i > 0) sb.append(", ");
+                    sb.append(get(indices).pretty());
+                    //s += ", " + get(indices).pretty();
+                } else {
+                    if (i > 0) sb.append(", ");
+                    sb.append(prettyList(shape, indices, level + 1));
+                    //s += ", " + prettyList(shape, indices, level + 1);
+                }
             }
+            s = sb.toString();
         }
-        return "[" + s.substring(2) + "]";
+        return "[" + s + "]";
     }
     
     /**
@@ -1054,8 +1073,9 @@ public class Data implements Cloneable {
 		getSubtype(Type.Code.LIST);
 		getSubtype(setter.getType().getCode(), 0);
 		setArraySize(data.size());
-		for (int i = 0; i < data.size(); i++) {
-			setter.set(get(i), data.get(i));
+        int i = 0;
+		for (T elem : data) {
+			setter.set(get(i++), elem);
 		}
 		return this;
 	}
