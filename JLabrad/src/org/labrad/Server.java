@@ -22,10 +22,9 @@ package org.labrad;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Map;
+
 import org.labrad.data.Context;
 import org.labrad.data.Data;
-import org.labrad.events.ContextListener;
-import org.labrad.events.ContextListenerSupport;
 import org.labrad.types.Type;
 
 /**
@@ -47,11 +46,11 @@ public class Server<T> {
     public void setNotes(String notes) { this.notes = notes; }
 
 
-    private ContextualServer<T> serverImpl;
+    private ContextualServer serverImpl;
     private Map<Context, T> contexts;
 
-    public ContextualServer<T> getServerImpl() { return serverImpl; }
-    public void setServerImpl(ContextualServer<T> serverImpl) {
+    public ContextualServer getServerImpl() { return serverImpl; }
+    public void setServerImpl(ContextualServer serverImpl) {
         this.serverImpl = serverImpl;
     }
 

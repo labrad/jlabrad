@@ -10,13 +10,11 @@ import java.beans.PropertyChangeSupport;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -28,8 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 import org.labrad.data.Context;
 import org.labrad.data.Data;
 import org.labrad.data.Packet;
@@ -44,7 +41,6 @@ import org.labrad.events.ConnectionListener;
 import org.labrad.events.ConnectionListenerSupport;
 import org.labrad.events.MessageListener;
 import org.labrad.events.MessageListenerSupport;
-import org.labrad.types.Type;
 import org.labrad.util.LookupProvider;
 import org.labrad.util.Util;
 
@@ -554,46 +550,55 @@ public class ServerConnection<T> implements Connection {
 
     // new stuff for servers...
 
-    private Map<Context, T> contexts = new HashMap<Context, T>();
+    private Map<Context, ContextualServer> contexts = new HashMap<Context, ContextualServer>();
 
     private void handleRequest(Packet packet) {
         Context context = packet.getContext();
         long source = packet.getTarget();
-        if (!contexts.containsKey(context)) {
-            contexts.put(context, serverImpl.newContext(context, source));
-        }
-        T ctxData = contexts.get(context);
         Request response = Request.to(source, context);
-        for (Record rec : packet.getRecords()) {
-            Method m = dispatchTable.get(rec.getID());
-            RequestContext<T> ctx = new RequestContext<T>(context, source, ctxData);
-            Data respData;
-            try {
-                //respData = serverImpl.dispatch(rec.getID(), ctx, rec.getData());
-                respData = (Data) m.invoke(serverImpl, ctx, rec.getData());
-            } catch (LabradException ex) {
-                respData = Data.ofType("E").setError(ex.getCode(), ex.getMessage());
-            } catch (Exception ex) {
-                StringWriter sw = new StringWriter();
+        try {
+	        if (!contexts.containsKey(context)) {
+	            contexts.put(context, serverImpl.newInstance());
+	        }
+	        ContextualServer server = contexts.get(context);
+	        server.setSource(source);
+	        server.setContext(context);
+	        for (Record rec : packet.getRecords()) {
+	            Method m = dispatchTable.get(rec.getID());
+	            Data respData;
+	            try {
+	                respData = (Data) m.invoke(server, rec.getData());
+	            } catch (LabradException ex) {
+	                respData = Data.ofType("E").setError(ex.getCode(), ex.getMessage());
+	            } catch (Exception ex) {
+	                StringWriter sw = new StringWriter();
+	                ex.printStackTrace(new PrintWriter(sw));
+	                respData = Data.ofType("E").setError(0, sw.toString());
+	            }
+	            response.add(rec.getID(), respData);
+	            if (respData.isError()) break;
+	        }
+        } catch (Exception ex) {
+        	if (packet.getRecords().size() > 0) {
+        		StringWriter sw = new StringWriter();
                 ex.printStackTrace(new PrintWriter(sw));
-                respData = Data.ofType("E").setError(0, sw.toString());
-            }
-            response.add(rec.getID(), respData);
-            if (respData.isError()) break;
+        		response.add(packet.getRecords().get(0).getID(),
+        				     Data.ofType("E").setError(0, sw.toString()));
+        	}
         }
         writeQueue.add(Packet.forRequest(response, -packet.getRequest()));
     }
 
 
-    private ContextualServer<T> serverImpl;
+    private Class<? extends ContextualServer> serverImpl;
 
-    public ContextualServer<T> getServerImpl() { return serverImpl; }
-    public void setServerImpl(ContextualServer<T> serverImpl) {
+    public Class<? extends ContextualServer> getServerImpl() { return serverImpl; }
+    public void setServerImpl(Class<? extends ContextualServer> serverImpl) {
         this.serverImpl = serverImpl;
     }
 
     private Data getLoginData() {
-        ServerInfo info = serverImpl.getClass().getAnnotation(ServerInfo.class);
+        ServerInfo info = serverImpl.getAnnotation(ServerInfo.class);
         Data data = Data.ofType("wsss");
         data.get(0).setWord(Constants.PROTOCOL);
         data.get(1).setString(info.name()); // TODO: allow environ vars in name
@@ -606,7 +611,7 @@ public class ServerConnection<T> implements Connection {
 
     private void registerSettings()
             throws InterruptedException, ExecutionException {
-        for (Method m : serverImpl.getClass().getMethods()) {
+        for (Method m : serverImpl.getMethods()) {
             if (m.isAnnotationPresent(Setting.class)) {
                 //System.out.println(m.getName() + " is remotely callable.");
                 Setting s = m.getAnnotation(Setting.class);
@@ -626,11 +631,11 @@ public class ServerConnection<T> implements Connection {
             }
         }
         sendAndWait(Request.to("Manager").add("S: Start Serving"));
-        List<Data> datas = new ArrayList<Data>();
+        System.out.println("Now serving...");
     }
 
 
-    public static <T> ServerConnection<T> create(ContextualServer<T> server) {
+    public static <T> ServerConnection<T> create(Class<? extends ContextualServer> server) {
         ServerConnection<T> cxn = new ServerConnection<T>();
         cxn.setServerImpl(server);
         return cxn;

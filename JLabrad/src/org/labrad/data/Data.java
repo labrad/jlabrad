@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -33,6 +32,7 @@ import java.util.Random;
 
 import org.labrad.errors.NonIndexableTypeException;
 import org.labrad.types.Cluster;
+import org.labrad.types.Empty;
 import org.labrad.types.Type;
 
 /**
@@ -132,8 +132,8 @@ public class Data implements Cloneable {
      * @param elements
      * @return
      */
-    public static Data of(Data...elements) {
-    	return Data.of(Arrays.asList(elements));
+    public static Data clusterOf(Data...elements) {
+    	return Data.clusterOf(Arrays.asList(elements));
     }
     
     /**
@@ -141,7 +141,7 @@ public class Data implements Cloneable {
      * @param elements
      * @return
      */
-    public static Data of(List<Data> elements) {
+    public static Data clusterOf(List<Data> elements) {
     	List<Type> elementTypes = new ArrayList<Type>();
     	for (Data elem : elements) {
     		elementTypes.add(elem.getType());
@@ -151,6 +151,36 @@ public class Data implements Cloneable {
     		cluster.get(i).set(elements.get(i));
     	}
     	return cluster;
+    }
+    
+    /**
+     * Build a LabRAD list from a java array of data objects.
+     * @param elements
+     * @return
+     */
+    public static Data listOf(Data...elements) {
+    	return Data.listOf(Arrays.asList(elements));
+    }
+    
+    /**
+     * Build a LabRAD list from a java List of data objects.
+     * @param elements
+     * @return
+     */
+    public static Data listOf(List<Data> elements) {
+    	Type elementType;
+    	if (elements.size() == 0) {
+    		elementType = Empty.getInstance();
+    	} else {
+    		elementType = elements.get(0).getType();
+    	}
+    	Data data = new Data(org.labrad.types.List.of(elementType));
+    	data.setArraySize(elements.size());
+    	int i = 0;
+    	for (Data elem : elements) {
+    		data.get(i++).set(elem);
+    	}
+    	return data;
     }
     
     // static constructors for basic types

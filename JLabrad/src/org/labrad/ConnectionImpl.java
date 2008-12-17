@@ -22,7 +22,6 @@ package org.labrad;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
-import java.io.Serializable;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;

@@ -3,6 +3,7 @@ JLabrad TODOs:
 Server
 - create server bean
 - have connection bean fire RequestEvent
+- make server class BE the context object (static vs. instance methods and vars)
 
 Deployment
 - how to deploy JLabrad to developers
@@ -22,3 +23,6 @@ Data
 General
 - try to write things as interfaces, rather than concrete types.
 - implement connection object, server, client, etc. as beans (ala delphi API)
+
+Examples
+- write some example clients and servers

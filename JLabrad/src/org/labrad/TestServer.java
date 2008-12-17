@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.labrad.data.Context;
 import org.labrad.data.Data;
 import org.labrad.errors.IncorrectPasswordException;
@@ -37,74 +38,77 @@ import org.labrad.errors.LoginFailedException;
 @ServerInfo(name="Java Test Server",
             description="Basic server to test JLabrad API.",
             notes="Not much else to say, really.")
-public class TestServer implements ContextualServer<Map<String, Data>> {
-    @Override
-    public Map<String, Data> newContext(Context context, long source) {
-        Map<String, Data> ctxData = new HashMap<String, Data>();
-        ctxData.put("Test", Data.valueOf("blah"));
-        return ctxData;
+public class TestServer implements ContextualServer {
+    public TestServer() {
+    	registry.put("Test", Data.valueOf("blah"));
     }
-
-    @Override
-    public void expireContext(Context context, Map<String, Data> data) {
-        // cleanup here
-    }
-
+    
+    private long source;
+    public void setSource(long source) { this.source = source; }
+    public long getSource() { return source; }
+    
+    private Context context;
+    public void setContext(Context context) { this.context = context; }
+    public Context getContext() { return context; }
+    
+    private Map<String, Data> registry = new HashMap<String, Data>();
+    
     private void log(String method, Data data) {
         System.out.println(method + " called [" + data.getTag() + "]: " + data.pretty());
     }
 
-    @Setting(ID=1, name="Echo", returns="?",
+    @Setting(ID=1, name="Echo", accepts="?", returns="?",
              description="Echoes back any data sent to this setting.")
-    public Data echo(RequestContext<Map<String, Data>> ctx, Data data) {
+    public Data echo(Data data) {
         log("Echo", data);
         return data;
     }
 
     @Setting(ID=2, name="Set", accepts="s?", returns="?",
              description="Sets a key value pair in the current context.")
-    public Data set(RequestContext<Map<String, Data>> ctx, Data data) {
+    public Data set(Data data) {
         log("Set", data);
-        ctx.getData().put(data.get(0).getString(), data.get(1));
-        return data.get(1);
+        String key = data.get(0).getString();
+        Data value = data.get(1).clone();
+        registry.put(key, value);
+        return value;
     }
 
     @Setting(ID=3, name="Get", accepts="s", returns="?",
              description="Gets a key from the current context.")
-    public Data get(RequestContext<Map<String, Data>> ctx, Data data) {
+    public Data get(Data data) {
         log("Get", data);
         String key = data.getString();
-        if (!ctx.getData().containsKey(key)) {
+        if (!registry.containsKey(key)) {
             throw new RuntimeException("Invalid key: " + key);
         }
-        return ctx.getData().get(key);
+        return registry.get(key);
     }
 
     @Setting(ID=4, name="Get All", accepts="", returns="?",
              description="Gets all of the key-value pairs defined in this context.")
-    public Data getAll(RequestContext<Map<String, Data>> ctx, Data data) {
+    public Data getAll(Data data) {
         log("Get All", data);
-        Map<String, Data> map = ctx.getData();
         List<Data> items = new ArrayList<Data>();
-        for (String key : map.keySet()) {
-            items.add(Data.of(Data.valueOf(key), map.get(key)));
+        for (String key : registry.keySet()) {
+            items.add(Data.clusterOf(Data.valueOf(key), registry.get(key)));
         }
-        return Data.of(items);
+        return Data.clusterOf(items);
     }
 
     @Setting(ID=5, name="Keys", accepts="", returns="*s",
              description="Returns a list of all keys defined in this context.")
-    public Data getKeys(RequestContext<Map<String, Data>> ctx, Data data) {
+    public Data getKeys(Data data) {
         log("Keys", data);
-        return Data.ofType("*s").setStringList(new ArrayList<String>(ctx.getData().keySet()));
+        return Data.ofType("*s").setStringList(new ArrayList<String>(registry.keySet()));
     }
 
 
     public static void main(String[] args)
             throws UnknownHostException, IOException,
                    LoginFailedException, IncorrectPasswordException {
-        ServerConnection cxn = ServerConnection.create(new TestServer());
-        cxn.setPassword("");
+        ServerConnection cxn = ServerConnection.create(TestServer.class);
+        cxn.setPassword("martinisgroup");
         cxn.connect();
     }
 }

@@ -6,13 +6,13 @@
 package org.labrad;
 
 import org.labrad.data.Context;
-import org.labrad.data.Data;
+
 
 /**
  *
  * @author maffoo
  */
-public interface ContextualServer<T> {
-    T newContext(Context context, long source);
-    void expireContext(Context context, T data);
+public interface ContextualServer {
+	void setSource(long source);
+	void setContext(Context context);
 }
