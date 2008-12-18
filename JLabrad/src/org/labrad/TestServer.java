@@ -26,8 +26,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.concurrent.ExecutionException;
 import org.labrad.data.Context;
 import org.labrad.data.Data;
+import org.labrad.data.Request;
 import org.labrad.errors.IncorrectPasswordException;
 import org.labrad.errors.LoginFailedException;
 
@@ -38,19 +40,11 @@ import org.labrad.errors.LoginFailedException;
 @ServerInfo(name="Java Test Server",
             description="Basic server to test JLabrad API.",
             notes="Not much else to say, really.")
-public class TestServer implements ContextualServer {
+public class TestServer extends AbstractContextServer {
     public TestServer() {
     	registry.put("Test", Data.valueOf("blah"));
     }
-    
-    private long source;
-    public void setSource(long source) { this.source = source; }
-    public long getSource() { return source; }
-    
-    private Context context;
-    public void setContext(Context context) { this.context = context; }
-    public Context getContext() { return context; }
-    
+        
     private Map<String, Data> registry = new HashMap<String, Data>();
     
     private void log(String method, Data data) {
@@ -103,12 +97,22 @@ public class TestServer implements ContextualServer {
         return Data.ofType("*s").setStringList(new ArrayList<String>(registry.keySet()));
     }
 
+    @Setting(ID=6, name="Get Random Data", accepts="", returns="?",
+             description="Fetches random data by making a request to the python test server.")
+    public Data getRandomData(Data data) throws InterruptedException, ExecutionException {
+        log("Get Random Data", data);
+        Request request = Request.to("Python Test Server").add("Get Random Data");
+        List<Data> response = getConnection().sendAndWait(request);
+        return response.get(0);
+    }
 
     public static void main(String[] args)
             throws UnknownHostException, IOException,
-                   LoginFailedException, IncorrectPasswordException {
+                   LoginFailedException, IncorrectPasswordException,
+                   InterruptedException, ExecutionException {
         ServerConnection cxn = ServerConnection.create(TestServer.class);
         cxn.setPassword("martinisgroup");
         cxn.connect();
+        cxn.serve();
     }
 }

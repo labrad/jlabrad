@@ -27,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import java.util.concurrent.TimeUnit;
 import org.labrad.data.Context;
 import org.labrad.data.Data;
 import org.labrad.data.Packet;
@@ -242,7 +243,7 @@ public class ServerConnection<T> implements Connection {
     private Thread reader, writer;
     private PacketInputStream inputStream;
     private PacketOutputStream outputStream;
-    private BlockingQueue<Packet> writeQueue;
+    private BlockingQueue<Packet> writeQueue, handlerQueue;
 
     /** Request IDs that are available to be reused. */
     private RequestDispatcher requestDispatcher;
@@ -271,6 +272,7 @@ public class ServerConnection<T> implements Connection {
         outputStream = new PacketOutputStream(socket.getOutputStream());
 
         writeQueue = new LinkedBlockingQueue<Packet>();
+        handlerQueue = new LinkedBlockingQueue<Packet>();
         requestDispatcher = new RequestDispatcher(writeQueue);
 
         reader = new Thread(new Runnable() {
@@ -283,6 +285,8 @@ public class ServerConnection<T> implements Connection {
                     // let the client know that we have disconnected.
                     if (!Thread.interrupted())
                         close(e);
+                } catch (Exception e) {
+                    close(e);
                 }
             }
         }, "Packet Reader Thread");
@@ -299,6 +303,8 @@ public class ServerConnection<T> implements Connection {
                     // this happens when the connection is closed.
                 } catch (IOException e) {
                     // let the client know that we have disconnected.
+                    close(e);
+                } catch (Exception e) {
                     close(e);
                 }
             }
@@ -550,19 +556,37 @@ public class ServerConnection<T> implements Connection {
 
     // new stuff for servers...
 
-    private Map<Context, ContextualServer> contexts = new HashMap<Context, ContextualServer>();
+    public void serve() throws InterruptedException, ExecutionException {
+        sendAndWait(Request.to("Manager").add("S: Start Serving"));
+        System.out.println("Now serving...");
+        
+        while (!Thread.interrupted()) {
+            Packet p = handlerQueue.poll(1, TimeUnit.SECONDS);
+            if (p != null) serveRequest(p);
+        }
+    }
+
+    private Map<Context, ContextServer> contexts = new HashMap<Context, ContextServer>();
 
     private void handleRequest(Packet packet) {
+        handlerQueue.add(packet);
+    }
+
+    private void serveRequest(Packet packet) {
         Context context = packet.getContext();
         long source = packet.getTarget();
         Request response = Request.to(source, context);
         try {
+            ContextServer server;
 	        if (!contexts.containsKey(context)) {
-	            contexts.put(context, serverImpl.newInstance());
-	        }
-	        ContextualServer server = contexts.get(context);
+                server = serverClass.newInstance();
+                server.setContext(context);
+                server.setConnection(this);
+	            contexts.put(context, server);
+	        } else {
+                server = contexts.get(context);
+            }
 	        server.setSource(source);
-	        server.setContext(context);
 	        for (Record rec : packet.getRecords()) {
 	            Method m = dispatchTable.get(rec.getID());
 	            Data respData;
@@ -590,15 +614,15 @@ public class ServerConnection<T> implements Connection {
     }
 
 
-    private Class<? extends ContextualServer> serverImpl;
+    private Class<? extends ContextServer> serverClass;
 
-    public Class<? extends ContextualServer> getServerImpl() { return serverImpl; }
-    public void setServerImpl(Class<? extends ContextualServer> serverImpl) {
-        this.serverImpl = serverImpl;
+    public Class<? extends ContextServer> getServerClass() { return serverClass; }
+    public void setServerClass(Class<? extends ContextServer> serverClass) {
+        this.serverClass = serverClass;
     }
 
     private Data getLoginData() {
-        ServerInfo info = serverImpl.getAnnotation(ServerInfo.class);
+        ServerInfo info = serverClass.getAnnotation(ServerInfo.class);
         Data data = Data.ofType("wsss");
         data.get(0).setWord(Constants.PROTOCOL);
         data.get(1).setString(info.name()); // TODO: allow environ vars in name
@@ -611,7 +635,7 @@ public class ServerConnection<T> implements Connection {
 
     private void registerSettings()
             throws InterruptedException, ExecutionException {
-        for (Method m : serverImpl.getMethods()) {
+        for (Method m : serverClass.getMethods()) {
             if (m.isAnnotationPresent(Setting.class)) {
                 //System.out.println(m.getName() + " is remotely callable.");
                 Setting s = m.getAnnotation(Setting.class);
@@ -630,14 +654,12 @@ public class ServerConnection<T> implements Connection {
                 sendAndWait(Request.to("Manager").add("S: Register Setting", data));
             }
         }
-        sendAndWait(Request.to("Manager").add("S: Start Serving"));
-        System.out.println("Now serving...");
     }
 
 
-    public static <T> ServerConnection<T> create(Class<? extends ContextualServer> server) {
+    public static <T> ServerConnection<T> create(Class<? extends ContextServer> server) {
         ServerConnection<T> cxn = new ServerConnection<T>();
-        cxn.setServerImpl(server);
+        cxn.setServerClass(server);
         return cxn;
     }
 }

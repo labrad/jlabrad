@@ -46,11 +46,11 @@ public class Server<T> {
     public void setNotes(String notes) { this.notes = notes; }
 
 
-    private ContextualServer serverImpl;
+    private ContextServer serverImpl;
     private Map<Context, T> contexts;
 
-    public ContextualServer getServerImpl() { return serverImpl; }
-    public void setServerImpl(ContextualServer serverImpl) {
+    public ContextServer getServerImpl() { return serverImpl; }
+    public void setServerImpl(ContextServer serverImpl) {
         this.serverImpl = serverImpl;
     }
 
