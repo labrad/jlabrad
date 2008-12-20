@@ -4,6 +4,11 @@ Server
 - create server bean
 - have connection bean fire RequestEvent
 - make server class BE the context object (static vs. instance methods and vars)
+server models:
+- one thread per context
+    - may eventually run out of threads, so use thread pool
+- event-driven model, where all the dispatching happens in the EventQueue thread
+    - this may be easiest to implement (just pass in a RequestContext that has a finish(Data) method
 
 Deployment
 - how to deploy JLabrad to developers
