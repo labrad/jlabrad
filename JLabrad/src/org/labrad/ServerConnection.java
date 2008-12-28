@@ -26,8 +26,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
-
 import java.util.concurrent.TimeUnit;
+
 import org.labrad.data.Context;
 import org.labrad.data.Data;
 import org.labrad.data.Packet;
@@ -276,7 +276,6 @@ public class ServerConnection<T> implements Connection {
         requestDispatcher = new RequestDispatcher(writeQueue);
 
         reader = new Thread(new Runnable() {
-            @Override
             public void run() {
                 try {
                     while (!Thread.interrupted())
@@ -292,7 +291,6 @@ public class ServerConnection<T> implements Connection {
         }, "Packet Reader Thread");
 
         writer = new Thread(new Runnable() {
-            @Override
             public void run() {
                 try {
                     while (true) {
@@ -456,8 +454,7 @@ public class ServerConnection<T> implements Connection {
         lookupProvider.doLookupsFromCache(request);
 		if (request.needsLookup()) {
 	    	result = executor.submit(new Callable<List<Data>>() {
-                @Override
-				public List<Data> call() throws Exception {
+                public List<Data> call() throws Exception {
 					lookupProvider.doLookups(request);
 					return sendWithoutLookups(request, callback).get();
 				}
@@ -478,7 +475,6 @@ public class ServerConnection<T> implements Connection {
      * @throws ExecutionException if the request returned an error or was canceled
      * @throws IOException if a network error occurred
      */
-    @Override
     public List<Data> sendAndWait(Request request)
     		throws InterruptedException, ExecutionException {
     	return send(request).get();

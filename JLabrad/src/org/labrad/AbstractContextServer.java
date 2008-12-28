@@ -15,14 +15,14 @@ public abstract class AbstractContextServer implements ContextServer {
     public AbstractContextServer() {}
 
     private long source;
-    @Override public void setSource(long source) { this.source = source; }
-    @Override public long getSource() { return source; }
+    public void setSource(long source) { this.source = source; }
+    public long getSource() { return source; }
 
     private Context context;
-    @Override public void setContext(Context context) { this.context = context; }
-    @Override public Context getContext() { return context; }
+    public void setContext(Context context) { this.context = context; }
+    public Context getContext() { return context; }
 
     private Connection connection;
-    @Override public void setConnection(Connection cxn) { this.connection = cxn; }
-    @Override public Connection getConnection() { return connection; }
+    public void setConnection(Connection cxn) { this.connection = cxn; }
+    public Connection getConnection() { return connection; }
 }

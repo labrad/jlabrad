@@ -220,7 +220,7 @@ public class ConnectionImpl implements Connection {
         requestDispatcher = new RequestDispatcher(writeQueue);
 
         reader = new Thread(new Runnable() {
-            @Override public void run() {
+            public void run() {
                 try {
                     while (!Thread.interrupted())
                         handlePacket(inputStream.readPacket());
@@ -233,7 +233,7 @@ public class ConnectionImpl implements Connection {
         }, "Packet Reader Thread");
 
         writer = new Thread(new Runnable() {
-            @Override public void run() {
+            public void run() {
                 try {
                     while (true) {
                         Packet p = writeQueue.take();
@@ -400,7 +400,6 @@ public class ConnectionImpl implements Connection {
         lookupProvider.doLookupsFromCache(request);
 		if (request.needsLookup()) {
 	    	result = executor.submit(new Callable<List<Data>>() {
-				@Override
 				public List<Data> call() throws Exception {
 					lookupProvider.doLookups(request);
 					return sendWithoutLookups(request, callback).get();
