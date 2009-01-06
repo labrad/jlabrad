@@ -29,6 +29,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -579,31 +580,39 @@ public class ServerConnection<T> implements Connection {
     }
 
     /** Thread pool for serving requests. */
-    private ExecutorService serverExecutor = Executors.newCachedThreadPool();
+    private final ExecutorService serverExecutor = Executors.newCachedThreadPool();
 
-    private Map<Context, ContextServer> contexts = new HashMap<Context, ContextServer>();
-    private Set<Context> currentlyServing = new HashSet<Context>();
+    private final Map<Context, ContextServer> contexts = new HashMap<Context, ContextServer>();
+    private final Set<Context> currentlyServing = new HashSet<Context>();
+    private final Map<Context, List<Packet>> contextBuffers = new HashMap<Context, List<Packet>>();
 
     private class RequestTask implements Runnable {
+        private Context context;
         private ContextServer server;
         private Packet packet;
+        private List<Packet> buffer;
 
-        public RequestTask(ContextServer server, Packet packet) {
+        public RequestTask(Context context, ContextServer server, Packet packet, List<Packet> buffer) {
+            this.context = context;
             this.server = server;
             this.packet = packet;
+            this.buffer = buffer;
         }
 
         public void run() {
             while (true) {
                 serveRequest(packet);
                 synchronized (currentlyServing) {
-                    
+                    if (buffer.size() == 0) {
+                        currentlyServing.remove(context);
+                    } else {
+                        packet = buffer.remove(0);
+                    }
                 }
             }
         }
 
         private void serveRequest(Packet packet) {
-            Context context = packet.getContext();
             long source = packet.getTarget();
             Request response = Request.to(source, context);
             try {
@@ -635,8 +644,6 @@ public class ServerConnection<T> implements Connection {
         }
     }
 
-    private final Object contextServerLock = new Object();
-
     private void handleRequest(Packet packet) {
         handlerQueue.add(packet);
     }
@@ -657,9 +664,11 @@ public class ServerConnection<T> implements Connection {
             synchronized (currentlyServing) {
                 if (!currentlyServing.contains(context)) {
                     currentlyServing.add(context);
-                    serverExecutor.submit(new RequestTask(server, packet));
+                    List<Packet> buffer = new ArrayList<Packet>();
+                    contextBuffers.put(context, buffer);
+                    serverExecutor.submit(new RequestTask(context, server, packet, buffer));
                 } else {
-
+                    contextBuffers.get(context).add(packet);
                 }
             }
         } catch (Exception ex) {
