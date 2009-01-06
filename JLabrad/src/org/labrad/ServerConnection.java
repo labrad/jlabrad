@@ -31,8 +31,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -576,7 +578,64 @@ public class ServerConnection<T> implements Connection {
         }
     }
 
+    /** Thread pool for serving requests. */
+    private ExecutorService serverExecutor = Executors.newCachedThreadPool();
+
     private Map<Context, ContextServer> contexts = new HashMap<Context, ContextServer>();
+    private Set<Context> currentlyServing = new HashSet<Context>();
+
+    private class RequestTask implements Runnable {
+        private ContextServer server;
+        private Packet packet;
+
+        public RequestTask(ContextServer server, Packet packet) {
+            this.server = server;
+            this.packet = packet;
+        }
+
+        public void run() {
+            while (true) {
+                serveRequest(packet);
+                synchronized (currentlyServing) {
+                    
+                }
+            }
+        }
+
+        private void serveRequest(Packet packet) {
+            Context context = packet.getContext();
+            long source = packet.getTarget();
+            Request response = Request.to(source, context);
+            try {
+                server.setSource(source);
+                for (Record rec : packet.getRecords()) {
+                    Method m = dispatchTable.get(rec.getID());
+                    Data respData;
+                    try {
+                        respData = (Data) m.invoke(server, rec.getData());
+                    } catch (LabradException ex) {
+                        respData = Data.ofType("E").setError(ex.getCode(), ex.getMessage());
+                    } catch (Exception ex) {
+                        StringWriter sw = new StringWriter();
+                        ex.printStackTrace(new PrintWriter(sw));
+                        respData = Data.ofType("E").setError(0, sw.toString());
+                    }
+                    response.add(rec.getID(), respData);
+                    if (respData.isError()) break;
+                }
+            } catch (Exception ex) {
+                if (packet.getRecords().size() > 0) {
+                    StringWriter sw = new StringWriter();
+                    ex.printStackTrace(new PrintWriter(sw));
+                    response.add(packet.getRecords().get(0).getID(),
+                                 Data.ofType("E").setError(0, sw.toString()));
+                }
+            }
+            writeQueue.add(Packet.forRequest(response, -packet.getRequest()));
+        }
+    }
+
+    private final Object contextServerLock = new Object();
 
     private void handleRequest(Packet packet) {
         handlerQueue.add(packet);
@@ -585,7 +644,6 @@ public class ServerConnection<T> implements Connection {
     private void serveRequest(Packet packet) {
         Context context = packet.getContext();
         long source = packet.getTarget();
-        Request response = Request.to(source, context);
         try {
             ContextServer server;
 	        if (!contexts.containsKey(context)) {
@@ -596,31 +654,24 @@ public class ServerConnection<T> implements Connection {
 	        } else {
                 server = contexts.get(context);
             }
-	        server.setSource(source);
-	        for (Record rec : packet.getRecords()) {
-	            Method m = dispatchTable.get(rec.getID());
-	            Data respData;
-	            try {
-	                respData = (Data) m.invoke(server, rec.getData());
-	            } catch (LabradException ex) {
-	                respData = Data.ofType("E").setError(ex.getCode(), ex.getMessage());
-	            } catch (Exception ex) {
-	                StringWriter sw = new StringWriter();
-	                ex.printStackTrace(new PrintWriter(sw));
-	                respData = Data.ofType("E").setError(0, sw.toString());
-	            }
-	            response.add(rec.getID(), respData);
-	            if (respData.isError()) break;
-	        }
+            synchronized (currentlyServing) {
+                if (!currentlyServing.contains(context)) {
+                    currentlyServing.add(context);
+                    serverExecutor.submit(new RequestTask(server, packet));
+                } else {
+
+                }
+            }
         } catch (Exception ex) {
+            Request response = Request.to(source, context);
         	if (packet.getRecords().size() > 0) {
         		StringWriter sw = new StringWriter();
                 ex.printStackTrace(new PrintWriter(sw));
         		response.add(packet.getRecords().get(0).getID(),
         				     Data.ofType("E").setError(0, sw.toString()));
         	}
+            writeQueue.add(Packet.forRequest(response, -packet.getRequest()));
         }
-        writeQueue.add(Packet.forRequest(response, -packet.getRequest()));
     }
 
 
