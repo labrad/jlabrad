@@ -25,9 +25,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import java.util.concurrent.ExecutionException;
-import org.labrad.data.Context;
+
 import org.labrad.data.Data;
 import org.labrad.data.Request;
 import org.labrad.errors.IncorrectPasswordException;
@@ -111,7 +110,7 @@ public class TestServer extends AbstractContextServer {
                    LoginFailedException, IncorrectPasswordException,
                    InterruptedException, ExecutionException {
         ServerConnection cxn = ServerConnection.create(TestServer.class);
-        cxn.setPassword("martinisgroup");
+        cxn.setPassword("");
         cxn.connect();
         cxn.serve();
     }
