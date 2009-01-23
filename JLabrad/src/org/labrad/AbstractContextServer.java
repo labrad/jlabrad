@@ -37,6 +37,6 @@ public abstract class AbstractContextServer implements ContextServer {
     public Context getContext() { return context; }
 
     private Connection connection;
-    public void setConnection(Connection cxn) { this.connection = cxn; }
+    public void setConnection(Connection cxn) { connection = cxn; }
     public Connection getConnection() { return connection; }
 }

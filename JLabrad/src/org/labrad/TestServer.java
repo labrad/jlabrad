@@ -40,12 +40,12 @@ import org.labrad.errors.LoginFailedException;
             description="Basic server to test JLabrad API.",
             notes="Not much else to say, really.")
 public class TestServer extends AbstractContextServer {
-    public TestServer() {
+	private Map<String, Data> registry = new HashMap<String, Data>();
+	
+	public TestServer() {
     	registry.put("Test", Data.valueOf("blah"));
     }
-        
-    private Map<String, Data> registry = new HashMap<String, Data>();
-    
+	
     private void log(String method, Data data) {
         System.out.println(method + " called [" + data.getTag() + "]: " + data.pretty());
     }
@@ -56,8 +56,18 @@ public class TestServer extends AbstractContextServer {
         log("Echo", data);
         return data;
     }
-
-    @Setting(ID=2, name="Set", accepts="s?", returns="?",
+    
+    @Setting(ID=2, name="Delayed Echo", accepts="v[s]?", returns="?",
+    		 description="Echoes back data after a specified delay.")
+    public Data delayedEcho(Data data) throws InterruptedException {
+    	log("Delayed Echo", data);
+    	double delay = data.get(0).getValue();
+    	Data payload = data.get(1);
+    	Thread.sleep((long)(delay*1000));
+    	return payload;
+    }
+    
+    @Setting(ID=3, name="Set", accepts="s?", returns="?",
              description="Sets a key value pair in the current context.")
     public Data set(Data data) {
         log("Set", data);
@@ -67,7 +77,7 @@ public class TestServer extends AbstractContextServer {
         return value;
     }
 
-    @Setting(ID=3, name="Get", accepts="s", returns="?",
+    @Setting(ID=4, name="Get", accepts="s", returns="?",
              description="Gets a key from the current context.")
     public Data get(Data data) {
         log("Get", data);
@@ -78,7 +88,7 @@ public class TestServer extends AbstractContextServer {
         return registry.get(key);
     }
 
-    @Setting(ID=4, name="Get All", accepts="", returns="?",
+    @Setting(ID=5, name="Get All", accepts="", returns="?",
              description="Gets all of the key-value pairs defined in this context.")
     public Data getAll(Data data) {
         log("Get All", data);
@@ -89,14 +99,14 @@ public class TestServer extends AbstractContextServer {
         return Data.clusterOf(items);
     }
 
-    @Setting(ID=5, name="Keys", accepts="", returns="*s",
+    @Setting(ID=6, name="Keys", accepts="", returns="*s",
              description="Returns a list of all keys defined in this context.")
     public Data getKeys(Data data) {
         log("Keys", data);
         return Data.ofType("*s").setStringList(new ArrayList<String>(registry.keySet()));
     }
 
-    @Setting(ID=6, name="Get Random Data", accepts="", returns="?",
+    @Setting(ID=7, name="Get Random Data", accepts="", returns="?",
              description="Fetches random data by making a request to the python test server.")
     public Data getRandomData(Data data) throws InterruptedException, ExecutionException {
         log("Get Random Data", data);
@@ -104,13 +114,12 @@ public class TestServer extends AbstractContextServer {
         List<Data> response = getConnection().sendAndWait(request);
         return response.get(0);
     }
-
+    
     public static void main(String[] args)
             throws UnknownHostException, IOException,
                    LoginFailedException, IncorrectPasswordException,
                    InterruptedException, ExecutionException {
         ServerConnection cxn = ServerConnection.create(TestServer.class);
-        cxn.setPassword("");
         cxn.connect();
         cxn.serve();
     }

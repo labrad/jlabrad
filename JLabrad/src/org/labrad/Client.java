@@ -158,6 +158,10 @@ public class Client implements Connection, Serializable {
 		return ID;
 	}
 
+	private void setID(long ID) {
+		this.ID = ID;
+	}
+	
 
 	/**
 	 * Get the welcome message returned by the manager
@@ -196,10 +200,10 @@ public class Client implements Connection, Serializable {
     // events
     private final PropertyChangeSupport propertyChangeListeners =
                     new PropertyChangeSupport(this);
-    private final MessageListenerSupport messageListeners =
-                    new MessageListenerSupport(this);
     private final ConnectionListenerSupport connectionListeners =
                     new ConnectionListenerSupport(this);
+    private final MessageListenerSupport messageListeners =
+                    new MessageListenerSupport(this);
 
     /**
      * Add a listener for property change events.
@@ -338,7 +342,7 @@ public class Client implements Connection, Serializable {
 	 */
 	private void doLogin(String password)
 			throws LoginFailedException, IncorrectPasswordException {
-		long mgr = Constants.MANAGER;
+		final long mgr = Constants.MANAGER;
 		Data data, response;
 	    
 	    try {
@@ -356,21 +360,21 @@ public class Client implements Connection, Serializable {
             byte[] challenge = response.getBytes();
             md.update(challenge);
             md.update(password.getBytes(Data.STRING_ENCODING));
+            data = Data.valueOf(md.digest());
 
             // send password response
             try {
-                data = Data.valueOf(md.digest());
                 response = sendAndWait(new Request(mgr).add(0, data)).get(0);
             } catch (ExecutionException ex) {
                 throw new IncorrectPasswordException();
             }
 
-            // print welcome message
+            // record welcome message
             setLoginMessage(response.getString());
 
             // send identification packet
             response = sendAndWait(new Request(mgr).add(0, getLoginData())).get(0);
-            ID = response.getWord();
+            setID(response.getWord());
         } catch (InterruptedException ex) {
             throw new LoginFailedException(ex);
         } catch (ExecutionException ex) {
