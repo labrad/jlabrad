@@ -39,4 +39,7 @@ public abstract class AbstractContextServer implements ContextServer {
     private Connection connection;
     public void setConnection(Connection cxn) { connection = cxn; }
     public Connection getConnection() { return connection; }
+    
+    public abstract void init();
+    public abstract void expire();
 }

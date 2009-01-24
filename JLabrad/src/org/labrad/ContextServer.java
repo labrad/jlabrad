@@ -35,4 +35,7 @@ public interface ContextServer {
 
     void setConnection(Connection cxn);
     Connection getConnection();
+    
+    void init();
+    void expire();
 }

@@ -42,9 +42,14 @@ import org.labrad.errors.LoginFailedException;
 public class TestServer extends AbstractContextServer {
 	private Map<String, Data> registry = new HashMap<String, Data>();
 	
-	public TestServer() {
+	public void init() {
     	registry.put("Test", Data.valueOf("blah"));
+    	System.out.println("Context " + getContext() + " created.");
     }
+	
+	public void expire() {
+		System.out.println("Context " + getContext() + " expired.");
+	}
 	
     private void log(String method, Data data) {
         System.out.println(method + " called [" + data.getTag() + "]: " + data.pretty());

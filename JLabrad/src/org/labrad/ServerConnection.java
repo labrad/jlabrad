@@ -29,13 +29,10 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -50,10 +47,8 @@ import org.labrad.data.Data;
 import org.labrad.data.Packet;
 import org.labrad.data.PacketInputStream;
 import org.labrad.data.PacketOutputStream;
-import org.labrad.data.Record;
 import org.labrad.data.Request;
 import org.labrad.errors.IncorrectPasswordException;
-import org.labrad.errors.LabradException;
 import org.labrad.errors.LoginFailedException;
 import org.labrad.events.ConnectionListener;
 import org.labrad.events.ConnectionListenerSupport;
@@ -604,29 +599,10 @@ public class ServerConnection implements Connection {
      */
     private void serveRequest(Packet packet) {
         Context context = packet.getContext();
-        long source = packet.getTarget();
         try {
-            ContextServer server;
-	        if (!contexts.containsKey(context)) {
-                server = serverClass.newInstance();
-                server.setContext(context);
-                server.setConnection(this);
-	            contexts.put(context, server);
-	        } else {
-                server = contexts.get(context);
-            }
-            synchronized (currentlyServing) {
-                if (currentlyServing.contains(context)) {
-                	contextBuffers.get(context).add(packet);
-                } else {
-                    currentlyServing.add(context);
-                    List<Packet> buffer = new ArrayList<Packet>();
-                    contextBuffers.put(context, buffer);
-                    serverExecutor.submit(new RequestTask(context, server, packet, buffer));
-                }
-            }
+	        getContextManager(context).serveRequest(packet);
         } catch (Exception ex) {
-            Request response = Request.to(source, context);
+            Request response = Request.to(packet.getTarget(), context);
         	if (packet.getRecords().size() > 0) {
         		StringWriter sw = new StringWriter();
                 ex.printStackTrace(new PrintWriter(sw));
@@ -637,85 +613,34 @@ public class ServerConnection implements Connection {
         }
     }
     
-    private final Map<Context, ContextServer> contexts = new HashMap<Context, ContextServer>();
-    private final Set<Context> currentlyServing = new HashSet<Context>();
-    private final Map<Context, List<Packet>> contextBuffers = new HashMap<Context, List<Packet>>();
-
+    /**
+     * Map of contexts in which requests have been made and the managers for those context.
+     */
+    private final Map<Context, ContextManager> contexts = new HashMap<Context, ContextManager>();
+    
+    /**
+     * Get a context manager for the given context.  If this is the first
+     * time we have seen a particular context, a new manager will be created.
+     * @param context
+     * @return
+     * @throws InstantiationException
+     * @throws IllegalAccessException
+     */
+    private ContextManager getContextManager(Context context)
+    		throws InstantiationException, IllegalAccessException {
+    	ContextManager manager;
+        if (!contexts.containsKey(context)) {
+        	manager = ContextManager.create(this, serverClass, context);
+        } else {
+        	manager = contexts.get(context);
+        }
+        return manager;
+    }
+    
     /** Thread pool for serving requests. */
     private final ExecutorService serverExecutor = Executors.newFixedThreadPool(100);
     
-    /**
-     * Serves requests in a single context.  When done serving a request, we check to see whether
-     * there are more requests pending in this context, and if so we continue serving.  If not,
-     * This task will exit.  This allows for more contexts to be served than if each context had
-     * a long-lived thread.
-     *
-     */
-    private class RequestTask implements Runnable {
-        private Context context;
-        private ContextServer server;
-        private Packet packet;
-        private List<Packet> buffer;
-
-        public RequestTask(Context context, ContextServer server, Packet packet, List<Packet> buffer) {
-            this.context = context;
-            this.server = server;
-            this.packet = packet;
-            this.buffer = buffer;
-        }
-
-        /**
-         * Serve requests until all pending requests are finished.
-         */
-        public void run() {
-            while (true) {
-                serveRequest(packet);
-                synchronized (currentlyServing) {
-                    if (buffer.size() == 0) {
-                        currentlyServing.remove(context);
-                        break;
-                    } else {
-                        packet = buffer.remove(0);
-                    }
-                }
-            }
-        }
-
-        /**
-         * Serve a single request.
-         * @param packet
-         */
-        private void serveRequest(Packet packet) {
-            long source = packet.getTarget();
-            Request response = Request.to(source, context);
-            try {
-                server.setSource(source);
-                for (Record rec : packet.getRecords()) {
-                    Method m = dispatchTable.get(rec.getID());
-                    Data respData;
-                    try {
-                        respData = (Data) m.invoke(server, rec.getData());
-                    } catch (LabradException ex) {
-                        respData = Data.ofType("E").setError(ex.getCode(), ex.getMessage());
-                    } catch (Exception ex) {
-                        StringWriter sw = new StringWriter();
-                        ex.printStackTrace(new PrintWriter(sw));
-                        respData = Data.ofType("E").setError(0, sw.toString());
-                    }
-                    response.add(rec.getID(), respData);
-                    if (respData.isError()) break;
-                }
-            } catch (Exception ex) {
-                if (packet.getRecords().size() > 0) {
-                    StringWriter sw = new StringWriter();
-                    ex.printStackTrace(new PrintWriter(sw));
-                    response.add(packet.getRecords().get(0).getID(),
-                                 Data.ofType("E").setError(0, sw.toString()));
-                }
-            }
-            writeQueue.add(Packet.forRequest(response, -packet.getRequest()));
-        }
-    }
+    public ExecutorService getExecutor() { return serverExecutor; }
 
 
     /**
@@ -729,6 +654,10 @@ public class ServerConnection implements Connection {
         this.serverClass = serverClass;
     }
 
+    public void sendResponse(Packet packet) {
+    	writeQueue.add(packet);
+    }
+    
     /**
      * Get the data required to log in to LabRAD as a server.
      * @return
@@ -749,7 +678,10 @@ public class ServerConnection implements Connection {
      * before we begin serving.
      */
     private Map<Long, Method> dispatchTable = new HashMap<Long, Method>();
-
+    public Method getHandler(final long ID) {
+    	return dispatchTable.get(ID);
+    }
+    
     /**
      * Loop over all methods of the ContextServer, looking for those
      * marked as remotely-callable settings.  Send a registration packet
@@ -762,7 +694,6 @@ public class ServerConnection implements Connection {
     	Request registrations = Request.to("Manager");
         for (Method m : serverClass.getMethods()) {
             if (m.isAnnotationPresent(Setting.class)) {
-                //System.out.println(m.getName() + " is remotely callable.");
                 Setting s = m.getAnnotation(Setting.class);
                 if (dispatchTable.containsKey(s.ID())) {
                     throw new RuntimeException("ID " + s.ID() + " is already in use.");
@@ -775,7 +706,6 @@ public class ServerConnection implements Connection {
                 data.get(3).setStringList(Arrays.asList(s.accepts()));
                 data.get(4).setStringList(Arrays.asList(s.returns()));
                 data.get(5).setString(s.notes());
-                //System.out.println(data.pretty());
                 registrations.add("S: Register Setting", data);
             }
         }
