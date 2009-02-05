@@ -42,6 +42,17 @@ import org.labrad.errors.LoginFailedException;
 public class TestServer extends AbstractContextServer {
 	private Map<String, Data> registry = new HashMap<String, Data>();
 	
+	public static void initServer() {
+		// do server initialization here
+		// this gets called after we have connected to LabRAD, but before any contexts have been created
+		// TODO: need a way to get at a connection object here
+	}
+	
+	public static void shutdown() {
+		// do server cleanup here
+		// note that we may have already lost our connection by this point.
+	}
+	
 	public void init() {
     	registry.put("Test", Data.valueOf("blah"));
     	System.out.println("Context " + getContext() + " created.");
@@ -93,6 +104,11 @@ public class TestServer extends AbstractContextServer {
         return registry.get(key);
     }
 
+    /**
+     * Get all key-value pairs defined in this context.
+     * @param data
+     * @return
+     */
     @Setting(ID=5, name="Get All", accepts="", returns="?",
              description="Gets all of the key-value pairs defined in this context.")
     public Data getAll(Data data) {
@@ -104,6 +120,11 @@ public class TestServer extends AbstractContextServer {
         return Data.clusterOf(items);
     }
 
+    /**
+     * Get all keys defined in this context.
+     * @param data
+     * @return
+     */
     @Setting(ID=6, name="Keys", accepts="", returns="*s",
              description="Returns a list of all keys defined in this context.")
     public Data getKeys(Data data) {
@@ -111,11 +132,37 @@ public class TestServer extends AbstractContextServer {
         return Data.ofType("*s").setStringList(new ArrayList<String>(registry.keySet()));
     }
 
+    /**
+     * Get some random data by calling a setting on the python test server.
+     * @param data
+     * @return
+     * @throws InterruptedException
+     * @throws ExecutionException
+     */
     @Setting(ID=7, name="Get Random Data", accepts="", returns="?",
              description="Fetches random data by making a request to the python test server.")
     public Data getRandomData(Data data) throws InterruptedException, ExecutionException {
         log("Get Random Data", data);
         Request request = Request.to("Python Test Server").add("Get Random Data");
+        List<Data> response = getConnection().sendAndWait(request);
+        return response.get(0);
+    }
+    
+    /**
+     * Forward a request on to another server.
+     * @param data
+     * @return
+     * @throws InterruptedException
+     * @throws ExecutionException
+     */
+    @Setting(ID=8, name="Forward Request", accepts="ss?", returns="?",
+             description="Forwards a request on to another server, specified by name and setting.")
+    public Data forwardRequest(Data data) throws InterruptedException, ExecutionException {
+        log("Forward Request", data);
+        String server = data.get(0).getString();
+        String setting = data.get(1).getString();
+        Data payload = data.get(2);
+        Request request = Request.to(server).add(setting, payload);
         List<Data> response = getConnection().sendAndWait(request);
         return response.get(0);
     }

@@ -696,7 +696,7 @@ public class ServerConnection implements Connection {
             if (m.isAnnotationPresent(Setting.class)) {
                 Setting s = m.getAnnotation(Setting.class);
                 if (dispatchTable.containsKey(s.ID())) {
-                    throw new RuntimeException("ID " + s.ID() + " is already in use.");
+                    throw new RuntimeException("Setting ID " + s.ID() + " is already in use.");
                 }
                 dispatchTable.put(s.ID(), m);
                 Data data = Data.ofType("wss*s*ss");
