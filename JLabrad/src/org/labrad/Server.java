@@ -21,9 +21,7 @@ package org.labrad;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Map;
 
-import org.labrad.data.Context;
 import org.labrad.data.Data;
 import org.labrad.types.Type;
 
@@ -47,7 +45,7 @@ public class Server<T> {
 
 
     private ContextServer serverImpl;
-    private Map<Context, T> contexts;
+    //private Map<Context, T> contexts;
 
     public ContextServer getServerImpl() { return serverImpl; }
     public void setServerImpl(ContextServer serverImpl) {
