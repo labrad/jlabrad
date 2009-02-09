@@ -28,9 +28,11 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.labrad.data.Data;
+import org.labrad.data.Hydrant;
 import org.labrad.data.Request;
 import org.labrad.errors.IncorrectPasswordException;
 import org.labrad.errors.LoginFailedException;
+import org.labrad.types.Str;
 
 /**
  *
@@ -132,21 +134,24 @@ public class TestServer extends AbstractContextServer {
         return Data.ofType("*s").setStringList(new ArrayList<String>(registry.keySet()));
     }
 
-    /**
-     * Get some random data by calling a setting on the python test server.
-     * @param data
-     * @return
-     * @throws InterruptedException
-     * @throws ExecutionException
-     */
-    @Setting(ID=7, name="Get Random Data", accepts="", returns="?",
+    @Setting(ID=7, name="Get Random Data", accepts={"s", ""}, returns="?",
              description="Fetches random data by making a request to the python test server.")
-    public Data getRandomData(Data data) throws InterruptedException, ExecutionException {
+    public Data getRandomData(Data data) {
         log("Get Random Data", data);
-        Request request = Request.to("Python Test Server").add("Get Random Data");
-        List<Data> response = getConnection().sendAndWait(request);
-        return response.get(0);
+    	if (data.getType() instanceof Str) {
+    		return Hydrant.getRandomData(data.getString());
+    	}
+        return Hydrant.getRandomData();
     }
+    
+    @Setting(ID=8, name="Get Random Data Remote", accepts="", returns="?",
+            description="Fetches random data by making a request to the python test server.")
+   public Data getRandomDataRemote(Data data) throws InterruptedException, ExecutionException {
+       log("Get Random Data Remote", data);
+       Request request = Request.to("Python Test Server").add("Get Random Data", data);
+       List<Data> response = getConnection().sendAndWait(request);
+       return response.get(0);
+   }
     
     /**
      * Forward a request on to another server.
@@ -155,7 +160,7 @@ public class TestServer extends AbstractContextServer {
      * @throws InterruptedException
      * @throws ExecutionException
      */
-    @Setting(ID=8, name="Forward Request", accepts="ss?", returns="?",
+    @Setting(ID=9, name="Forward Request", accepts="ss?", returns="?",
              description="Forwards a request on to another server, specified by name and setting.")
     public Data forwardRequest(Data data) throws InterruptedException, ExecutionException {
         log("Forward Request", data);
