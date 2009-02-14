@@ -23,9 +23,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-// TODO add a function to find types for generic java data
-// TODO add comment handling to type tag parsing
-
 public abstract class Type {
 
 	public enum Code {
@@ -110,6 +107,7 @@ public abstract class Type {
         
         void skip() { skip(1); }
         void skip(int i) { s = s.substring(i); }
+        void skipWhitespace() { s = s.replaceFirst("[,\\s]*", ""); }
 
         int length() { return s.length(); }
 
@@ -123,62 +121,59 @@ public abstract class Type {
      * @return
      */
     public static Type fromTag(String tag) {
-    	// TODO this caching scheme is not thread-safe
-        if (cache.containsKey(tag)) {
-            return cache.get(tag);
-        }
-        Type type;
+    	tag = stripComments(tag);
         java.util.List<Type> subtypes = new ArrayList<Type>();
         Buffer tb = new Buffer(tag);
         while (tb.length() > 0) {
             subtypes.add(parseSingleType(tb));
         }
         switch (subtypes.size()) {
-            case 0:
-                type = Empty.getInstance();
-                break;
-
-            case 1:
-                type = subtypes.get(0);
-                break;
-
-            default:
-                type = Cluster.of(subtypes);
-                break;
+            case 0: return Empty.getInstance();
+            case 1: return subtypes.get(0);
+            default: return Cluster.of(subtypes);
         }
-        cache.put(tag, type);
-        return type;
     }
 
+    /**
+     * Remove any comments from the type tag.  This includes anything after a colon,
+     * as well as anything embedded between curly brackets: {}.
+     * @param tag
+     * @return
+     */
+    private static String stripComments(String tag) {
+    	tag = tag.split(":")[0]; // strip off any trailing comments
+    	tag = tag.replaceAll("\\{[^\\{\\}]*\\}", ""); // remove anything in brackets
+    	return tag;
+    }
+    
     /**
      * Parse a single type from a buffer that may contain a cluster of types.
      * @param tb
      * @return
      */
     private static Type parseSingleType(Buffer tb) {
-        String units;
+        tb.skipWhitespace();
         if (tb.length() == 0) {
             return Empty.getInstance();
         }
+        Type t;
         switch (tb.getChar()) {
-            case '_': return Empty.getInstance();
-            case '?': return Any.getInstance();
-            case 'b': return Bool.getInstance();
-            case 'i': return Int.getInstance();
-            case 'w': return Word.getInstance();
-            case 's': return Str.getInstance();
-            case 't': return Time.getInstance();
-            case 'v':
-                units = parseUnits(tb);
-                return Value.of(units);
-            case 'c':
-                units = parseUnits(tb);
-                return Complex.of(units);
-            case '(': return parseCluster(tb);
-            case '*': return parseList(tb);
-            case 'E': return parseError(tb);
+            case '_': t = Empty.getInstance(); break;
+            case '?': t = Any.getInstance(); break;
+            case 'b': t = Bool.getInstance(); break;
+            case 'i': t = Int.getInstance(); break;
+            case 'w': t = Word.getInstance(); break;
+            case 's': t = Str.getInstance(); break;
+            case 't': t = Time.getInstance(); break;
+            case 'v': t = Value.of(parseUnits(tb)); break;
+            case 'c': t = Complex.of(parseUnits(tb)); break;
+            case '(': t = parseCluster(tb); break;
+            case '*': t = parseList(tb); break;
+            case 'E': t = parseError(tb); break;
+            default: throw new RuntimeException("Unknown character in type tag.");
         }
-        throw new RuntimeException("Unknown character in type tag.");
+        tb.skipWhitespace();
+        return t;
     }
 
     /**
@@ -206,6 +201,7 @@ public abstract class Type {
      * @return
      */
     private static Type parseList(Buffer tb) {
+    	tb.skipWhitespace();
         int depth = 0, nDigits = 0;
         while (Character.isDigit(tb.peekChar())) {
             depth = depth * 10 + Integer.valueOf(tb.get());
@@ -217,6 +213,7 @@ public abstract class Type {
             }
             depth = 1;
         }
+        tb.skipWhitespace();
         Type elementType = parseSingleType(tb);
         return List.of(elementType, depth);
     }
@@ -237,6 +234,7 @@ public abstract class Type {
      * @return
      */
     private static String parseUnits(Buffer tb) {
+    	tb.skipWhitespace();
         String units = "";
         char c;
         if ((tb.length() == 0) || (tb.peekChar() != '[')) {
@@ -320,13 +318,22 @@ public abstract class Type {
     }
 
     public static void main(String[] args) {
-        String[] tests = { "b", "i", "w", "is", "*(is)", "v", "v[]", "v[m/s]",
-                "", "?", "*?", "*2?", "(s?)" };
+        String[] tests = {
+        		// basic types
+        		"b", "i", "w", "is", "*(is)", "v", "v[]", "v[m/s]",
+                "", "?", "*?", "*2?", "(s?)",
+                // comments
+                "s: this has a trailing comment",
+                "ss{embedded comment}is",
+                "ss{embedded comment}is: trailing comment",
+                // whitespace and commas
+                "s,s", "s, s", "* 3 v[m]"};
         for (String s : tests) {
             Type t = fromTag(s);
             System.out.println("original: " + s);
             System.out.println("parsed: " + t.toString());
             System.out.println("pretty: " + t.pretty());
+            System.out.println("");
         }
     }
 }

@@ -47,7 +47,6 @@ public class TestServer extends AbstractContextServer {
 	public static void initServer() {
 		// do server initialization here
 		// this gets called after we have connected to LabRAD, but before any contexts have been created
-		// TODO: need a way to get at a connection object here
 	}
 	
 	public static void shutdown() {

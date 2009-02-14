@@ -29,6 +29,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +42,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.labrad.data.Context;
 import org.labrad.data.Data;
@@ -664,9 +667,27 @@ public class ServerConnection implements Connection {
      */
     private Data getLoginData() {
         ServerInfo info = serverClass.getAnnotation(ServerInfo.class);
+        String name = info.name();
+        // interpolate environment vars
+        Pattern p = Pattern.compile("%([^%]*)%");
+        Matcher m = p.matcher(name);
+        // find all environment vars in the string
+        List<String> keys = new ArrayList<String>();
+        while (m.find()) {
+        	keys.add(m.group(1));
+        }
+        // substitute environment variable into string
+        for (String key : keys) {
+        	String val = Util.getEnv(key, null);
+        	System.out.println(key + " => " + val);
+        	if (val != null) {
+        		name = name.replaceAll("%" + key + "%", val);
+        	}
+        }
+        
         Data data = Data.ofType("wsss");
         data.get(0).setWord(Constants.PROTOCOL);
-        data.get(1).setString(info.name()); // TODO: allow environ vars in name
+        data.get(1).setString(name);
         data.get(2).setString(info.description());
         data.get(3).setString(info.notes());
         return data;
