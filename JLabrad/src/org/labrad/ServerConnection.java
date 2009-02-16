@@ -590,6 +590,7 @@ public class ServerConnection implements Connection {
         
     	while (!Thread.interrupted()) {
     		Packet p = handlerQueue.poll(1, TimeUnit.SECONDS);
+    		// TODO use interrupt to exit here, rather than polling timeout
     		if (p != null) {
     			serveRequest(p);
     		}
@@ -599,7 +600,7 @@ public class ServerConnection implements Connection {
     	}
     	if (shouldShutdown) {
     		// finish serving pending requests
-    		serverExecutor.shutdown();
+    		requestExecutor.shutdown();
     		// expire all contexts
     		for (ContextManager ctx : contexts.values()) {
     			ctx.expire();
@@ -608,6 +609,7 @@ public class ServerConnection implements Connection {
     		server.shutdown();
     		// close the connection to LabRAD
     		close();
+    		// notify anyone waiting for shutdown to complete
     		finishShutdown();
     	}
     }
@@ -695,9 +697,9 @@ public class ServerConnection implements Connection {
     }
     
     /** Thread pool for serving requests. */
-    private final ExecutorService serverExecutor = Executors.newFixedThreadPool(100);
+    private final ExecutorService requestExecutor = Executors.newFixedThreadPool(100);
     public void submit(Runnable task) {
-    	serverExecutor.submit(task);
+    	requestExecutor.submit(task);
     }
 
     /**
