@@ -21,21 +21,29 @@ package org.labrad;
 
 import org.labrad.data.Context;
 
-
 /**
  *
  * @author maffoo
  */
-public interface ContextServer {
-	void setSource(long source);
-    long getSource();
+public abstract class AbstractServerContext implements ServerContext {
+    public AbstractServerContext() {}
 
-	void setContext(Context context);
-    Context getContext();
+    private long source;
+    public void setSource(long source) { this.source = source; }
+    public long getSource() { return source; }
 
-    void setConnection(Connection cxn);
-    Connection getConnection();
+    private Context context;
+    public void setContext(Context context) { this.context = context; }
+    public Context getContext() { return context; }
+
+    private Server server;
+    public void setServer(Server server) { this.server = server; }
+    public Server getServer() { return server; }
     
-    void init();
-    void expire();
+    private Connection connection;
+    public void setConnection(Connection cxn) { connection = cxn; }
+    public Connection getConnection() { return connection; }
+    
+    public abstract void init();
+    public abstract void expire();
 }

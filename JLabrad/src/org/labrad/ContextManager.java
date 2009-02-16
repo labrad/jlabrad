@@ -5,7 +5,6 @@ import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 import org.labrad.data.Context;
 import org.labrad.data.Data;
@@ -16,8 +15,7 @@ import org.labrad.errors.LabradException;
 
 public class ContextManager {
 	final ServerConnection connection;
-	final ContextServer server;
-	final ExecutorService executor;
+	final ServerContext server;
 	final Object lock = new Object();
 	boolean currentlyServing = false;
 	final List<Packet> requestBuffer = new ArrayList<Packet>();
@@ -32,19 +30,25 @@ public class ContextManager {
 	 * @throws IllegalAccessException
 	 */
 	public static ContextManager create(ServerConnection cxn,
-			Class<? extends ContextServer> serverClass, Context context)
+			Class<? extends ServerContext> serverClass, Context context)
 				throws InstantiationException, IllegalAccessException {
-		ContextServer server;
+		// TODO send response from here if context instantiation fails
+		ServerContext server;
 		server = serverClass.newInstance();
         server.setContext(context);
         server.setConnection(cxn);
+        server.init();
         return new ContextManager(cxn, server);
 	}
 	
-	private ContextManager(ServerConnection connection, ContextServer server) {
+	private ContextManager(ServerConnection connection, ServerContext server) {
 		this.connection = connection;
 		this.server = server;
-		this.executor = connection.getExecutor();
+	}
+	
+	public void expire() {
+		// the executor will get shutdown by the server connection who owns it.
+		server.expire();
 	}
 	
 	/**
@@ -60,15 +64,18 @@ public class ContextManager {
 		}
 		try {
             synchronized (lock) {
-                if (currentlyServing) {
-                	requestBuffer.add(request);
-                } else {
-                    executor.submit(new RequestTask(request));
-                    currentlyServing = true;
+            	requestBuffer.add(request);
+                if (!currentlyServing) {
+                	currentlyServing = true;
+                    connection.submit(new RequestProcessor());
                 }
             }
         } catch (Exception ex) {
         	// note that this catch clause should be unnecessary
+        	// it will only get called if something happens in adding
+        	// the request to the buffer, or in submitting to the executor
+        	// if an error occurs in either of those places, something
+        	// has gone very wrong.
             Request response = responseFor(request);
     		response.add(request.getRecords().get(0).getID(), errorFor(ex));
     		sendResponse(request, response);
@@ -76,62 +83,57 @@ public class ContextManager {
 	}
 	
 	/**
-     * Serves requests in a single context.  When done serving a request, we check to see whether
+     * Serve a single request.
+     * @param packet
+     */
+    private void processRequest(Packet packet) {
+        server.setSource(packet.getTarget());
+        Request response = responseFor(packet);
+        try {
+            for (Record rec : packet.getRecords()) {
+                Method m = connection.getHandler(rec.getID());
+                Data respData;
+                try {
+                    respData = (Data) m.invoke(server, rec.getData());
+                } catch (LabradException ex) {
+                    respData = errorFor(ex);
+                } catch (Exception ex) {
+                    respData = errorFor(ex);
+                }
+                response.add(rec.getID(), respData);
+                if (respData.isError()) break;
+            }
+        } catch (Exception ex) {
+        	// note that this try-catch should be unneccessary
+        	// the only way it could be triggered is if the call
+        	// to getHandler were to fail, which should be impossible
+        	// since the manager checks the setting IDs sent to us.
+            response.add(packet.getRecords().get(0).getID(), errorFor(ex));
+        }
+        sendResponse(packet, response);
+    }
+	
+	/**
+     * Processes requests in a single context.  When done serving a request, we check to see whether
      * there are more requests pending in this context, and if so we continue serving.  If not,
      * This task will exit.  This allows for more contexts to be served than if each context had
      * a long-lived thread.
      *
      */
-    public class RequestTask implements Runnable {
-    	private Packet request;
-    	
-        public RequestTask(Packet request) {
-        	this.request = request;
-        }
-
-        /**
-         * Serve requests until all pending requests are finished.
-         */
+    private class RequestProcessor implements Runnable {
         public void run() {
+        	Packet request;
             while (true) {
-                serveRequest(request);
                 synchronized (lock) {
-                    if (requestBuffer.size() == 0) {
+                    if (requestBuffer.size() > 0) {
+                    	request = requestBuffer.remove(0);
+                    } else {
                         currentlyServing = false;
                         break;
-                    } else {
-                        request = requestBuffer.remove(0);
                     }
                 }
+                processRequest(request);
             }
-        }
-
-        /**
-         * Serve a single request.
-         * @param packet
-         */
-        private void serveRequest(Packet packet) {
-            server.setSource(packet.getTarget());
-            Request response = responseFor(packet);
-            try {
-                for (Record rec : packet.getRecords()) {
-                    Method m = connection.getHandler(rec.getID());
-                    Data respData;
-                    try {
-                        respData = (Data) m.invoke(server, rec.getData());
-                    } catch (LabradException ex) {
-                        respData = errorFor(ex);
-                    } catch (Exception ex) {
-                        respData = errorFor(ex);
-                    }
-                    response.add(rec.getID(), respData);
-                    if (respData.isError()) break;
-                }
-            } catch (Exception ex) {
-            	// note that this try-catch should be unneccessary
-                response.add(packet.getRecords().get(0).getID(), errorFor(ex));
-            }
-            sendResponse(packet, response);
         }
     }
     

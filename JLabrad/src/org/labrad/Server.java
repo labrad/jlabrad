@@ -19,54 +19,15 @@
 
 package org.labrad;
 
-import java.lang.reflect.Method;
-import java.util.Arrays;
-
-import org.labrad.data.Data;
-import org.labrad.types.Type;
 
 /**
  *
  * @author maffoo
  */
-public class Server<T> {
-
-    private static final Type SETTING_REGISTRATION = Type.fromTag("wss*s*ss");
-
-    // properties
-    private String description;
-    public String getDescription() { return description; }
-    public void setString(String description) { this.description = description; }
-
-
-    private String notes;
-    public String getNotes() { return notes; }
-    public void setNotes(String notes) { this.notes = notes; }
-
-
-    private ContextServer serverImpl;
-    //private Map<Context, T> contexts;
-
-    public ContextServer getServerImpl() { return serverImpl; }
-    public void setServerImpl(ContextServer serverImpl) {
-        this.serverImpl = serverImpl;
-    }
-
-    public static void findSettings(Class<?> serverClass) {
-        for (Method m : serverClass.getMethods()) {
-            if (m.isAnnotationPresent(Setting.class)) {
-                System.out.println(m.getName() + " is remotely callable.");
-                Setting s = m.getAnnotation(Setting.class);
-                Data data = Data.ofType(SETTING_REGISTRATION);
-                data.get(0).setWord(s.ID());
-                data.get(1).setString(s.name());
-                data.get(2).setString(s.description());
-                data.get(3).setStringList(Arrays.asList(s.accepts()));
-                data.get(4).setStringList(Arrays.asList(s.returns()));
-                data.get(5).setString(s.notes());
-                System.out.println(data.pretty());
-            }
-        }
-    }
-
+public interface Server {
+	void setConnection(Connection cxn);
+    Connection getConnection();
+	
+	void init();
+	void shutdown();
 }

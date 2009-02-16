@@ -582,17 +582,66 @@ public class ServerConnection implements Connection {
      * @throws ExecutionException
      */
     public void serve() throws InterruptedException, ExecutionException {
+    	// initialize the server
+    	server.init();
+    	
         sendAndWait(Request.to("Manager").add("S: Start Serving"));
         System.out.println("Now serving...");
         
-        while (!Thread.interrupted()) {
-            Packet p = handlerQueue.poll(1, TimeUnit.SECONDS);
-            if (p != null) {
-            	serveRequest(p);
-            }
-        }
+    	while (!Thread.interrupted()) {
+    		Packet p = handlerQueue.poll(1, TimeUnit.SECONDS);
+    		if (p != null) {
+    			serveRequest(p);
+    		}
+    		if (shouldShutdown || !isConnected()) {
+    			break;
+    		}
+    	}
+    	if (shouldShutdown) {
+    		// finish serving pending requests
+    		serverExecutor.shutdown();
+    		// expire all contexts
+    		for (ContextManager ctx : contexts.values()) {
+    			ctx.expire();
+    		}
+    		// shutdown the server
+    		server.shutdown();
+    		// close the connection to LabRAD
+    		close();
+    		finishShutdown();
+    	}
     }
 
+    
+    // shutdown handling
+    
+    private void finishShutdown() {
+    	synchronized (shutdownStatus) {
+    		shutdownFinished = true;
+    		shutdownStatus.notifyAll();
+    	}
+    }
+    
+    Object shutdownStatus = new Object();
+    boolean shouldShutdown = false;
+    boolean shutdownFinished = false;
+    
+    public void triggerShutdown() {
+    	shouldShutdown = true;
+    	synchronized (shutdownStatus) {
+	    	while (!shutdownFinished) {
+	    		try {
+	    			shutdownStatus.wait();
+				} catch (InterruptedException e) {
+					// if we get interrupted here, just quit
+					break;
+				}
+	    	}
+    	}
+    }
+    
+    // request serving
+    
     /**
      * Serve a single request.  If there is already a task running to
      * serve this context, we simply buffer this packet into that
@@ -612,12 +661,16 @@ public class ServerConnection implements Connection {
         		response.add(packet.getRecords().get(0).getID(),
         				     Data.ofType("E").setError(0, sw.toString()));
         	}
-            writeQueue.add(Packet.forRequest(response, -packet.getRequest()));
+            sendResponse(Packet.forRequest(response, -packet.getRequest()));
         }
     }
     
+    public void sendResponse(Packet packet) {
+    	writeQueue.add(packet);
+    }
+    
     /**
-     * Map of contexts in which requests have been made and the managers for those context.
+     * Map of contexts in which requests have been made and the managers for those contexts.
      */
     private final Map<Context, ContextManager> contexts = new HashMap<Context, ContextManager>();
     
@@ -634,6 +687,7 @@ public class ServerConnection implements Connection {
     	ContextManager manager;
         if (!contexts.containsKey(context)) {
         	manager = ContextManager.create(this, serverClass, context);
+        	contexts.put(context, manager);
         } else {
         	manager = contexts.get(context);
         }
@@ -642,23 +696,27 @@ public class ServerConnection implements Connection {
     
     /** Thread pool for serving requests. */
     private final ExecutorService serverExecutor = Executors.newFixedThreadPool(100);
+    public void submit(Runnable task) {
+    	serverExecutor.submit(task);
+    }
+
+    /**
+     * The server that will be associated with this connection.
+     * This provides global functionality accessible to any context.
+     */
+    private Server server;
+    public Server getServer() { return server; }
+    public void setServer(Server server) { this.server = server; }
     
-    public ExecutorService getExecutor() { return serverExecutor; }
-
-
     /**
      * The context server class associated with this connection.  A new instance
      * of this server class will be created for each context in which requests are made.
      */
-    private Class<? extends ContextServer> serverClass;
+    private Class<? extends ServerContext> serverClass;
 
-    public Class<? extends ContextServer> getServerClass() { return serverClass; }
-    public void setServerClass(Class<? extends ContextServer> serverClass) {
+    public Class<? extends ServerContext> getServerClass() { return serverClass; }
+    public void setServerClass(Class<? extends ServerContext> serverClass) {
         this.serverClass = serverClass;
-    }
-
-    public void sendResponse(Packet packet) {
-    	writeQueue.add(packet);
     }
     
     /**
@@ -666,7 +724,7 @@ public class ServerConnection implements Connection {
      * @return
      */
     private Data getLoginData() {
-        ServerInfo info = serverClass.getAnnotation(ServerInfo.class);
+        ServerInfo info = server.getClass().getAnnotation(ServerInfo.class);
         String name = info.name();
         // interpolate environment vars
         Pattern p = Pattern.compile("%([^%]*)%");
@@ -738,9 +796,10 @@ public class ServerConnection implements Connection {
      * @param server
      * @return
      */
-    public static ServerConnection create(Class<? extends ContextServer> server) {
+    public static ServerConnection create(Server server, Class<? extends ServerContext> contextClass) {
         ServerConnection cxn = new ServerConnection();
-        cxn.setServerClass(server);
+        cxn.setServer(server);
+        cxn.setServerClass(contextClass);
         return cxn;
     }
 }
