@@ -6,6 +6,7 @@ Server
 - create server bean
 - have connection bean fire RequestEvent
 - make server class BE the context object (static vs. instance methods and vars)
+- handle context expiration messages
 
 Deployment
 - how to deploy JLabrad to developers
