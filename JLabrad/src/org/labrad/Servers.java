@@ -19,31 +19,25 @@
 
 package org.labrad;
 
-import java.io.IOException;
-import java.net.UnknownHostException;
-import java.util.concurrent.ExecutionException;
-
-import org.labrad.errors.IncorrectPasswordException;
-import org.labrad.errors.LoginFailedException;
 
 public class Servers {
 	public static void runServer(Class<? extends Server> serverClass,
 			                     Class<? extends ServerContext> contextClass,
-			                     String[] args)
-			throws InstantiationException, IllegalAccessException,
-			       UnknownHostException, IOException,
-			       LoginFailedException, IncorrectPasswordException,
-			       InterruptedException, ExecutionException {
-		Server server = serverClass.newInstance();
-		final ServerConnection cxn = ServerConnection.create(server, contextClass);
-        cxn.connect();
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-        	public void run() {
-        		System.out.println("in shutdown hook.");
-        		cxn.triggerShutdown();
-        		System.out.println("exiting shutdown hook.");
-        	}
-        });
-        cxn.serve();
+			                     String[] args) {
+		try {
+			Server server = serverClass.newInstance();
+			final ServerConnection cxn = ServerConnection.create(server, contextClass);
+	        cxn.connect();
+	        Runtime.getRuntime().addShutdownHook(new Thread() {
+	        	public void run() {
+	        		System.out.println("in shutdown hook.");
+	        		cxn.triggerShutdown();
+	        		System.out.println("exiting shutdown hook.");
+	        	}
+	        });
+	        cxn.serve();
+		} catch (Exception ex) {
+			throw new RuntimeException(ex);
+		}
 	}
 }

@@ -20,8 +20,6 @@
 package org.labrad.types;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 public abstract class Type {
 
@@ -56,6 +54,7 @@ public abstract class Type {
 	 * Encapsulates a cache of type objects.  A LinkedHashMap is used with a finite
 	 * size to prevent the cache from growing without bounds.
 	 */
+	/*
 	@SuppressWarnings("serial")
 	private static class Cache extends LinkedHashMap<String, Type> {
 		private static final int CACHE_SIZE = 100;
@@ -65,10 +64,10 @@ public abstract class Type {
 			return size() > CACHE_SIZE;
 		}
 	}
+	*/
 	
 	/** A cache of parsed type objects. */
-    private static Cache cache = new Cache();
-	
+    //private static Cache cache = new Cache();
 	
 	// types used in parsing and unparsing packets
 
@@ -254,6 +253,12 @@ public abstract class Type {
     
     // instance methods on type objects
     
+    public boolean matches(String tag) {
+    	return matches(Type.fromTag(tag));
+    }
+    
+    public abstract boolean matches(Type type);
+    
     /**
      * Returns a verbose string describing this type object.
      */
@@ -334,6 +339,36 @@ public abstract class Type {
             System.out.println("parsed: " + t.toString());
             System.out.println("pretty: " + t.pretty());
             System.out.println("");
+        }
+        
+        // check pairs that should match
+        String[] matchTests = {
+        		"", "",
+        		"", "?",
+        		"?", "?",
+        		"v[s]", "v",
+        		"v[s]", "v[s]",
+        		"*s", "*s",
+        		"*s", "*?"};
+        for (int i = 0; i < matchTests.length; i += 2) {
+        	Type t1 = Type.fromTag(matchTests[i]);
+        	Type t2 = Type.fromTag(matchTests[i+1]);
+        	assert t1.matches(t2);
+        	System.out.println("'" + t1 + "' matches '" + t2 + "'");
+        }
+        
+        // check pairs that should not match
+        String[] notMatchTests = {
+        		"", "i",
+        		"?", "s",
+        		"v[s]", "v[m]",
+        		"(ss)", "(si)",
+        		"*s", "*2s"};
+        for (int i = 0; i < notMatchTests.length; i += 2) {
+        	Type t1 = Type.fromTag(matchTests[i]);
+        	Type t2 = Type.fromTag(matchTests[i+1]);
+        	assert !t1.matches(t2);
+        	System.out.println("'" + t1 + "' does not match '" + t2 + "'");
         }
     }
 }

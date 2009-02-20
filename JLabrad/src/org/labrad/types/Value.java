@@ -41,6 +41,12 @@ public final class Value extends Type {
 
     public String getUnits() { return units; }
 
+    public boolean matches(Type type) {
+    	return (type instanceof Any) ||
+    	       (type instanceof Value &&
+    	    		   (type.getUnits() == null || type.getUnits() == getUnits()));
+    }
+    
     public Type.Code getCode() { return Type.Code.VALUE; }
     public char getChar() { return 'v'; }
 

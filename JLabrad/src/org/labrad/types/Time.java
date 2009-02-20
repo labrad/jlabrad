@@ -27,6 +27,10 @@ public final class Time extends Type {
     
     public static Time getInstance() { return instance; }
 
+    public boolean matches(Type type) {
+    	return (type instanceof Any) || (type instanceof Time);
+    }
+    
     public Type.Code getCode() { return Type.Code.TIME; }
     public char getChar() { return 't'; }
 

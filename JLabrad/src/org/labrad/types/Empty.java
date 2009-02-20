@@ -27,6 +27,10 @@ public final class Empty extends Type {
 
     public static Empty getInstance() { return instance; }
 
+    public boolean matches(Type type) {
+    	return (type instanceof Any) || (type instanceof Empty);
+    }
+    
     public Type.Code getCode() { return Type.Code.EMPTY; }
     public char getChar() { return '_'; }
 

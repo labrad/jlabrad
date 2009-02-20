@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.labrad.data.Packet;
 import org.labrad.data.Request;
@@ -87,7 +89,8 @@ class RequestDispatcher {
             receiver.set(packet);
         } else {
             // response to a request we didn't make
-            // TODO log this as an error
+        	String message = "Received a response to an unknown request: " + request + ".";
+            Logger.getLogger("RequestDispatcher").log(Level.WARNING, message);
         }
     }
 

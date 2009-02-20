@@ -19,12 +19,6 @@
 
 package org.labrad;
 
-import java.io.IOException;
-import java.net.UnknownHostException;
-import java.util.concurrent.ExecutionException;
-
-import org.labrad.errors.IncorrectPasswordException;
-import org.labrad.errors.LoginFailedException;
 
 @ServerInfo(name="Java Test Server",
         description="Basic server to test JLabrad API.",
@@ -38,23 +32,7 @@ public class TestServer extends AbstractServer {
 		System.out.println("shutdown() called on server.");
 	}
 	
-	/**
-     * Run this server.
-     * @param args
-     * @throws UnknownHostException
-     * @throws IOException
-     * @throws LoginFailedException
-     * @throws IncorrectPasswordException
-     * @throws InterruptedException
-     * @throws ExecutionException
-     * @throws IllegalAccessException 
-     * @throws InstantiationException 
-     */
-    public static void main(String[] args)
-            throws UnknownHostException, IOException,
-                   LoginFailedException, IncorrectPasswordException,
-                   InterruptedException, ExecutionException,
-                   InstantiationException, IllegalAccessException {
+    public static void main(String[] args) {
     	Servers.runServer(TestServer.class, TestServerContext.class, args);
     }
 }

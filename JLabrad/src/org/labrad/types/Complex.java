@@ -40,6 +40,12 @@ public final class Complex extends Type {
 
     public String getUnits() { return units; }
 
+    public boolean matches(Type type) {
+    	return (type instanceof Any) ||
+    	       (type instanceof Complex &&
+    	    		   (type.getUnits() == null || type.getUnits() == getUnits()));
+    }
+    
     public Type.Code getCode() { return Type.Code.COMPLEX; }
     public char getChar() { return 'c'; }
 

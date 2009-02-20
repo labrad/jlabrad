@@ -27,6 +27,10 @@ public final class Any extends Type {
     
     public static Any getInstance() { return instance; }
 
+    public boolean matches(Type type) {
+    	return (type instanceof Any);
+    }
+    
     public Type.Code getCode() { return Type.Code.ANY; }
     public char getChar() { return '?'; }
 

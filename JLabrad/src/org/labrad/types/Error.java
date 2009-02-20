@@ -33,6 +33,11 @@ public final class Error extends Type {
     
     private Error(Type payload) { this.payload = payload; }
 
+    public boolean matches(Type type) {
+    	// TODO also check payload type here
+    	return (type instanceof Any) || (type instanceof Error);
+    }
+    
     public Type.Code getCode() { return Type.Code.ERROR; }
     public char getChar() { return 'E'; }
 

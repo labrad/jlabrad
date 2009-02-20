@@ -27,6 +27,10 @@ public final class Word extends Type {
     
     public static Word getInstance() { return instance; }
 
+    public boolean matches(Type type) {
+    	return (type instanceof Any) || (type instanceof Word);
+    }
+    
     public Type.Code getCode() { return Type.Code.WORD; }
     public char getChar() { return 'w'; }
 

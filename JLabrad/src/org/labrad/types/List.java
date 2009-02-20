@@ -73,6 +73,13 @@ public final class List extends Type {
                 + ")";
     }
 
+    public boolean matches(Type type) {
+    	if (type instanceof Any) return true;
+    	if (!(type instanceof List)) return false;
+    	if (type.getDepth() != getDepth()) return false;
+    	return getSubtype(0).matches(type.getSubtype(0));
+    }
+    
     public Type.Code getCode() { return Type.Code.LIST; }
     public char getChar() { return '*'; }
 

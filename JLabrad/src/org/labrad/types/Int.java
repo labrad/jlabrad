@@ -27,6 +27,10 @@ public final class Int extends Type {
 
     public static Int getInstance() { return instance; }
 
+    public boolean matches(Type type) {
+    	return (type instanceof Any) || (type instanceof Int);
+    }
+    
     public Type.Code getCode() { return Type.Code.INT; }
     public char getChar() { return 'i'; }
 

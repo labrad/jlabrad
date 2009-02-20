@@ -726,7 +726,13 @@ public class ServerConnection implements Connection {
      * @return
      */
     private Data getLoginData() {
-        ServerInfo info = server.getClass().getAnnotation(ServerInfo.class);
+    	Class<?> cls = server.getClass();
+    	if (!cls.isAnnotationPresent(ServerInfo.class)) {
+    		String name = cls.getName();
+    		String message = "Server class '" + name + "' needs @ServerInfo annotation.";
+    		throw new RuntimeException(message);
+    	}
+        ServerInfo info = cls.getAnnotation(ServerInfo.class);
         String name = info.name();
         // interpolate environment vars
         Pattern p = Pattern.compile("%([^%]*)%");

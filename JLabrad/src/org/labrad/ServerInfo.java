@@ -32,6 +32,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface ServerInfo {
     String name();
-    String description() default "";
+    String description();
     String notes() default "";
 }

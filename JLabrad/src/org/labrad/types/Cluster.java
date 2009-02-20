@@ -84,6 +84,17 @@ public final class Cluster extends Type {
         return "cluster(" + s.substring(2) + ")";
     }
 
+    public boolean matches(Type type) {
+    	if (type instanceof Any) return true;
+    	if (!(type instanceof Cluster)) return false;
+    	if (type.size() != size()) return false;
+    	for (int i = 0; i < size(); i++) {
+    		if (!getSubtype(i).matches(type.getSubtype(i)))
+    			return false;
+    	}
+    	return true;
+    }
+    
     public Type.Code getCode() { return Type.Code.CLUSTER; }
     public char getChar() { return '('; }
     public Type getSubtype(int index) { return elementTypes.get(index); }

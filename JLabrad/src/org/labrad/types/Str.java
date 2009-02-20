@@ -27,6 +27,10 @@ public final class Str extends Type {
     
     public static Str getInstance() { return instance; }
 
+    public boolean matches(Type type) {
+    	return (type instanceof Any) || (type instanceof Str);
+    }
+    
     public Type.Code getCode() { return Type.Code.STR; }
     public char getChar() { return 's'; }
 

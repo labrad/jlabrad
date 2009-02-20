@@ -34,7 +34,7 @@ public @interface Setting {
     long ID();
     String name();
     String[] accepts();
-    String[] returns() default "";
+    String[] returns();
     String description();
     String notes() default "";
 }
