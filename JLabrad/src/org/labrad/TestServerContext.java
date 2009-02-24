@@ -62,6 +62,31 @@ public class TestServerContext extends AbstractServerContext {
     }
 
     /**
+	 * Print out a log message when a setting is called.
+	 * @param setting
+	 * @param data
+	 */
+    private void log(String setting) {
+        System.out.println(setting + " called with no data");
+    }
+    
+    /**
+	 * Make a request to the given server and setting.
+	 * @param server
+	 * @param setting
+	 * @param data
+	 * @return
+	 * @throws InterruptedException
+	 * @throws ExecutionException
+	 */
+	private Data makeRequest(String server, String setting, Data data)
+			throws InterruptedException, ExecutionException {
+		Request request = Request.to(server, getContext()).add(setting, data);
+	    List<Data> response = getConnection().sendAndWait(request);
+	    return response.get(0);
+	}
+
+	/**
      * Echo back the data sent to this setting.
      * @param data
      * @return
@@ -127,8 +152,8 @@ public class TestServerContext extends AbstractServerContext {
      */
     @Setting(ID=5, name="Get All", accepts="", returns="?",
              description="Gets all of the key-value pairs defined in this context.")
-    public Data getAll(Data data) {
-        log("Get All", data);
+    public Data getAll() {
+        log("Get All");
         List<Data> items = new ArrayList<Data>();
         for (String key : registry.keySet()) {
             items.add(Data.clusterOf(Data.valueOf(key), registry.get(key)));
@@ -143,17 +168,16 @@ public class TestServerContext extends AbstractServerContext {
      */
     @Setting(ID=6, name="Keys", accepts="", returns="*s",
              description="Returns a list of all keys defined in this context.")
-    public Data getKeys(Data data) {
-        log("Keys", data);
+    public Data getKeys() {
+        log("Keys");
         return Data.ofType("*s").setStringList(new ArrayList<String>(registry.keySet()));
     }
 
     @Setting(ID=7, name="Remove", accepts="s", returns="",
     		 description="Removes the specified key from this context.")
-    public Data remove(Data data) {
+    public void remove(Data data) {
     	log("Remove", data);
     	registry.remove(data.getString());
-    	return Data.EMPTY;
     }
     
     /**
@@ -204,19 +228,25 @@ public class TestServerContext extends AbstractServerContext {
         return makeRequest(server, setting, payload);
     }
     
-    /**
-     * Make a request to the given server and setting.
-     * @param server
-     * @param setting
-     * @param data
-     * @return
-     * @throws InterruptedException
-     * @throws ExecutionException
-     */
-    private Data makeRequest(String server, String setting, Data data)
-    		throws InterruptedException, ExecutionException {
-    	Request request = Request.to(server, getContext()).add(setting, data);
-        List<Data> response = getConnection().sendAndWait(request);
-        return response.get(0);
+    // commented annotations will give errors
+    
+    @Setting(ID=11, name="Test No Args", accepts="", returns="b", description="")
+    //@Setting(ID=11, name="Test No Args", accepts="s", returns="b", description="")
+    public Data noArgs() {
+    	log("Test No Args");
+    	return Data.valueOf(true);
+    }
+    
+    @Setting(ID=12, name="Test No Return", accepts="?", returns="", description="")
+    //@Setting(ID=12, name="Test No Return", accepts="?", returns="s", description="")
+    public void noArgs(Data data) {
+    	log("Test No Return", data);
+    }
+    
+    @Setting(ID=13, name="Test No Args No Return", accepts="", returns="", description="")
+    //@Setting(ID=13, name="Test No Args No Return", accepts="s", returns="", description="")
+    //@Setting(ID=13, name="Test No Args No Return", accepts="", returns="s", description="")
+    public void noArgsNoReturn() {
+    	log("Test No Args No Return");
     }
 }

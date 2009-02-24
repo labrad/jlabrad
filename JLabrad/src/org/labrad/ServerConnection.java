@@ -327,8 +327,18 @@ public class ServerConnection implements Connection {
         writer.start();
 
         try {
-            connected = true; // set this so that login requests will complete
+        	// we set connected to true temporarily so that login requests will complete
+        	// however, we do not use the usual setter since that would send a message
+        	// to interested parties
+        	// TODO use two flags, one for network connection, and one when we're serving
+            connected = true;
             doLogin(password);
+        } catch (LoginFailedException ex) {
+        	close(ex);
+        	throw ex;
+        } catch (IncorrectPasswordException ex) {
+        	close(ex);
+        	throw ex;
         } finally {
             connected = false;
         }
@@ -764,37 +774,49 @@ public class ServerConnection implements Connection {
      * those settings.  This table is constructed after logging in but
      * before we begin serving.
      */
-    private Map<Long, Method> dispatchTable = new HashMap<Long, Method>();
-    public Method getHandler(final long ID) {
+    private Map<Long, SettingHandler> dispatchTable = new HashMap<Long, SettingHandler>();
+    public SettingHandler getHandler(final long ID) {
     	return dispatchTable.get(ID);
     }
     
     /**
-     * Loop over all methods of the ContextServer, looking for those
-     * marked as remotely-callable settings.  Send a registration packet
-     * to the manager to register all these settings.
+     * Loop over all methods of the ServerContext class, looking for those
+     * marked as remotely-callable settings.  Create setting handler objects
+     * to manage calling these various settings.
+     */
+    private void locateSettings() {
+    	for (Method m : serverClass.getMethods()) {
+            if (m.isAnnotationPresent(Setting.class)) {
+                Setting s = m.getAnnotation(Setting.class);
+                if (dispatchTable.containsKey(s.ID())) {
+                    Setting other = dispatchTable.get(s.ID()).getSettingInfo();
+                	String msg = "Setting ID " + s.ID() + " used by two settings: "
+                	           + "'" + s.name() + "' and '" + other.name() + "'."; 
+                    throw new RuntimeException(msg);
+                }
+                dispatchTable.put(s.ID(), SettingHandlers.forMethod(m));
+            }
+        }
+    }
+    
+    /**
+     * Send a registration packet to the manager to register all settings.
      * @throws InterruptedException
      * @throws ExecutionException
      */
     private void registerSettings()
             throws InterruptedException, ExecutionException {
     	Request registrations = Request.to("Manager");
-        for (Method m : serverClass.getMethods()) {
-            if (m.isAnnotationPresent(Setting.class)) {
-                Setting s = m.getAnnotation(Setting.class);
-                if (dispatchTable.containsKey(s.ID())) {
-                    throw new RuntimeException("Setting ID " + s.ID() + " is already in use.");
-                }
-                dispatchTable.put(s.ID(), m);
-                Data data = Data.ofType("wss*s*ss");
-                data.get(0).setWord(s.ID());
-                data.get(1).setString(s.name());
-                data.get(2).setString(s.description());
-                data.get(3).setStringList(Arrays.asList(s.accepts()));
-                data.get(4).setStringList(Arrays.asList(s.returns()));
-                data.get(5).setString(s.notes());
-                registrations.add("S: Register Setting", data);
-            }
+        for (SettingHandler handler : dispatchTable.values()) {
+            Setting s = handler.getSettingInfo();
+            Data data = Data.ofType("wss*s*ss");
+            data.get(0).setWord(s.ID());
+            data.get(1).setString(s.name());
+            data.get(2).setString(s.description());
+            data.get(3).setStringList(Arrays.asList(s.accepts()));
+            data.get(4).setStringList(Arrays.asList(s.returns()));
+            data.get(5).setString(s.notes());
+            registrations.add("S: Register Setting", data);
         }
         sendAndWait(registrations);
     }
@@ -808,6 +830,7 @@ public class ServerConnection implements Connection {
         ServerConnection cxn = new ServerConnection();
         cxn.setServer(server);
         cxn.setServerClass(contextClass);
+        cxn.locateSettings();
         return cxn;
     }
 }

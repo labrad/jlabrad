@@ -2,7 +2,6 @@ package org.labrad;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -91,10 +90,10 @@ public class ContextManager {
         Request response = responseFor(packet);
         try {
             for (Record rec : packet.getRecords()) {
-                Method m = connection.getHandler(rec.getID());
+                SettingHandler h = connection.getHandler(rec.getID());
                 Data respData;
                 try {
-                    respData = (Data) m.invoke(server, rec.getData());
+                    respData = h.handle(server, rec.getData());
                 } catch (LabradException ex) {
                     respData = errorFor(ex);
                 } catch (Exception ex) {
