@@ -23,5 +23,5 @@ import org.labrad.data.Data;
 
 public interface SettingHandler {
 	public Setting getSettingInfo();
-	public Data handle(Object obj, Data data) throws Exception;
+	public Data handle(Object obj, Data data) throws Throwable;
 }

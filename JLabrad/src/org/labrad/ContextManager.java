@@ -96,7 +96,7 @@ public class ContextManager {
                     respData = h.handle(server, rec.getData());
                 } catch (LabradException ex) {
                     respData = errorFor(ex);
-                } catch (Exception ex) {
+                } catch (Throwable ex) {
                     respData = errorFor(ex);
                 }
                 response.add(rec.getID(), respData);
@@ -168,7 +168,7 @@ public class ContextManager {
 	 * @param ex
 	 * @return
 	 */
-	private Data errorFor(Exception ex) {
+	private Data errorFor(Throwable ex) {
 		StringWriter sw = new StringWriter();
         ex.printStackTrace(new PrintWriter(sw));
 		return Data.ofType("E").setError(0, sw.toString());

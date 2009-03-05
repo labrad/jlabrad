@@ -239,7 +239,7 @@ public class TestServerContext extends AbstractServerContext {
     
     @Setting(ID=12, name="Test No Return", accepts="?", returns="", description="")
     //@Setting(ID=12, name="Test No Return", accepts="?", returns="s", description="")
-    public void noArgs(Data data) {
+    public void noReturn(Data data) {
     	log("Test No Return", data);
     }
     
