@@ -25,6 +25,7 @@ import org.labrad.handlers.BasicSettingHandler;
 import org.labrad.handlers.NoArgHandler;
 import org.labrad.handlers.NoArgNoReturnHandler;
 import org.labrad.handlers.NoReturnHandler;
+import org.labrad.types.Type;
 
 public class SettingHandlers {
 	public static SettingHandler forMethod(Method m) {
@@ -41,7 +42,7 @@ public class SettingHandlers {
 		if (noArgs) {
 			// make sure that the only specified LabRAD accepted type is ""
 			for (String t : s.accepts()) {
-				if (!t.isEmpty()) {
+				if (!Type.fromTag(t).matches("")) {
 					String msg = "Setting '" + s.name()
 							   + "' takes no args, but specifies non-empty accepted type: " + t;
 					throw new RuntimeException(msg);
@@ -51,7 +52,7 @@ public class SettingHandlers {
 		if (noReturn) {
 			// make sure that the only specified LabRAD return type is ""
 			for (String t : s.returns()) {
-				if (!t.isEmpty()) {
+				if (!Type.fromTag(t).matches("")) {
 					String msg = "Setting '" + s.name()
 							   + "' returns void, but specifies non-empty return type: " + t;
 					throw new RuntimeException(msg);

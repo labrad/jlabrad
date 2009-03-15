@@ -21,7 +21,8 @@ package org.labrad.events;
 
 import java.util.EventObject;
 
-import org.labrad.data.Packet;
+import org.labrad.data.Context;
+import org.labrad.data.Data;
 
 /**
  *
@@ -32,14 +33,31 @@ public class MessageEvent extends EventObject {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private Packet message;
+	private Context context;
+	private long srcID, msgID;
+	private Data data;
 
-    public MessageEvent(Object source, Packet message) {
+    public MessageEvent(Object source, Context context, long srcID, long msgID, Data data) {
         super(source);
-        this.message = message;
+        this.context = context;
+        this.srcID = srcID;
+        this.msgID = msgID;
+        this.data = data;
     }
 
-    public Packet getMessage() {
-        return message;
+    public Context getContext() {
+    	return context;
+    }
+    
+    public long getSourceID() {
+    	return srcID;
+    }
+    
+    public long getMessageID() {
+    	return msgID;
+    }
+    
+    public Data getData() {
+    	return data;
     }
 }

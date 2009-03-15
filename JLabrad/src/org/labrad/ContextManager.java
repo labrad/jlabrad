@@ -31,7 +31,6 @@ public class ContextManager {
 	public static ContextManager create(ServerConnection cxn,
 			Class<? extends ServerContext> serverClass, Context context)
 				throws InstantiationException, IllegalAccessException {
-		// TODO send response from here if context instantiation fails
 		ServerContext server;
 		server = serverClass.newInstance();
         server.setContext(context);
@@ -46,7 +45,9 @@ public class ContextManager {
 	}
 	
 	public void expire() {
-		// the executor will get shutdown by the server connection who owns it.
+		// the executor will get shutdown by the server connection who owns it,
+		// so we just tell the server context object to expire itself.
+		// TODO need to fix up the concurrency here
 		server.expire();
 	}
 	
@@ -72,8 +73,8 @@ public class ContextManager {
         } catch (Exception ex) {
         	// note that this catch clause should be unnecessary
         	// it will only get called if something happens in adding
-        	// the request to the buffer, or in submitting to the executor
-        	// if an error occurs in either of those places, something
+        	// the request to the buffer, or in submitting to the executor.
+        	// If an error occurs in either of those places, something
         	// has gone very wrong.
             Request response = responseFor(request);
     		response.add(request.getRecords().get(0).getID(), errorFor(ex));

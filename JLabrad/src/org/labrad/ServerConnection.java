@@ -55,6 +55,7 @@ import org.labrad.errors.IncorrectPasswordException;
 import org.labrad.errors.LoginFailedException;
 import org.labrad.events.ConnectionListener;
 import org.labrad.events.ConnectionListenerSupport;
+import org.labrad.events.MessageEvent;
 import org.labrad.events.MessageListener;
 import org.labrad.events.MessageListenerSupport;
 import org.labrad.util.LookupProvider;
@@ -595,6 +596,19 @@ public class ServerConnection implements Connection {
     	// initialize the server
     	server.init();
     	
+    	// TODO we really need to fix up the concurrency here
+    	Data data = Data.clusterOf(Data.valueOf(1L), Data.valueOf(false));
+    	sendAndWait(Request.to("Manager").add("S: Notify on Context Expiration", data));
+    	addMessageListener(new MessageListener() {
+			public void messageReceived(MessageEvent e) {
+				Context ctx = e.getContext();
+				if (contexts.containsKey(ctx)) {
+					contexts.get(ctx).expire();
+				}
+			}
+    	});
+    	
+    	
         sendAndWait(Request.to("Manager").add("S: Start Serving"));
         System.out.println("Now serving...");
         
@@ -666,6 +680,9 @@ public class ServerConnection implements Connection {
         try {
 	        getContextManager(context).serveRequest(packet);
         } catch (Exception ex) {
+        	// an exception can happen here if the context manager creation failed,
+        	// which probably means the context server object threw an exception
+        	// during initialization.  Otherwise, this should never get called
             Request response = Request.to(packet.getTarget(), context);
         	if (packet.getRecords().size() > 0) {
         		StringWriter sw = new StringWriter();
@@ -831,6 +848,7 @@ public class ServerConnection implements Connection {
         cxn.setServer(server);
         cxn.setServerClass(contextClass);
         cxn.locateSettings();
+        server.setConnection(cxn);
         return cxn;
     }
 }
