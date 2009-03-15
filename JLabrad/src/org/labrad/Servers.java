@@ -19,8 +19,12 @@
 
 package org.labrad;
 
-
 public class Servers {
+	/*
+	 * Convenience method to run a server by passing in the server and context
+	 * classes to be instantiated.  This also takes any command line args, though
+	 * none are processed at present.
+	 */
 	public static void runServer(Class<? extends Server> serverClass,
 			                     Class<? extends ServerContext> contextClass,
 			                     String[] args) {
@@ -30,9 +34,9 @@ public class Servers {
 	        cxn.connect();
 	        Runtime.getRuntime().addShutdownHook(new Thread() {
 	        	public void run() {
-	        		System.out.println("in shutdown hook.");
+	        		//System.out.println("in shutdown hook.");
 	        		cxn.triggerShutdown();
-	        		System.out.println("exiting shutdown hook.");
+	        		//System.out.println("exiting shutdown hook.");
 	        	}
 	        });
 	        cxn.serve();

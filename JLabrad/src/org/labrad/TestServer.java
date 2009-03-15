@@ -19,10 +19,14 @@
 
 package org.labrad;
 
-
+/*
+ * A very basic skeleton for a server to test the JLabrad API.
+ * 
+ * Most of the logic for this server is in the TestServerContext class.
+ */
 @ServerInfo(name="Java Test Server",
-        description="Basic server to test JLabrad API.",
-        notes="Not much else to say, really.")
+        	description="Basic server to test JLabrad API.",
+        	notes="Not much else to say, really.")
 public class TestServer extends AbstractServer {
 	public void init() {
 		System.out.println("init() called on server.");
