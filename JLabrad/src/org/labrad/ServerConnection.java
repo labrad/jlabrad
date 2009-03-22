@@ -19,11 +19,10 @@
 
 package org.labrad;
 
+import java.awt.EventQueue;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -560,14 +559,18 @@ public class ServerConnection implements Connection {
      * Handle packets coming in from the wire.
      * @param packet
      */
-    private void handlePacket(Packet packet) {
+    private void handlePacket(final Packet packet) {
         int request = packet.getRequest();
         if (request < 0) {
         	// response
             requestDispatcher.finishRequest(packet);
         } else if (request == 0) {
         	// handle incoming message
-            messageListeners.fireMessage(packet);
+        	EventQueue.invokeLater(new Runnable() {
+				public void run() {
+					messageListeners.fireMessage(packet);
+				}
+        	});
         } else {
         	// handle incoming request
             handleRequest(packet);
@@ -579,7 +582,7 @@ public class ServerConnection implements Connection {
     // new stuff for servers...
 
     /**
-     * add incoming requests to a queue to be server
+     * add incoming requests to a queue to be served
      */
     private void handleRequest(Packet packet) {
         handlerQueue.add(packet);
@@ -677,21 +680,7 @@ public class ServerConnection implements Connection {
      */
     private void serveRequest(Packet packet) {
         Context context = packet.getContext();
-        try {
-	        getContextManager(context).serveRequest(packet);
-        } catch (Exception ex) {
-        	// an exception can happen here if the context manager creation failed,
-        	// which probably means the context server object threw an exception
-        	// during initialization.  Otherwise, this should never get called
-            Request response = Request.to(packet.getTarget(), context);
-        	if (packet.getRecords().size() > 0) {
-        		StringWriter sw = new StringWriter();
-                ex.printStackTrace(new PrintWriter(sw));
-        		response.add(packet.getRecords().get(0).getID(),
-        				     Data.ofType("E").setError(0, sw.toString()));
-        	}
-            sendResponse(Packet.forRequest(response, -packet.getRequest()));
-        }
+        getContextManager(context).serveRequest(packet);
     }
     
     public void sendResponse(Packet packet) {
@@ -711,11 +700,10 @@ public class ServerConnection implements Connection {
      * @throws InstantiationException
      * @throws IllegalAccessException
      */
-    private ContextManager getContextManager(Context context)
-    		throws InstantiationException, IllegalAccessException {
+    private ContextManager getContextManager(Context context) {
     	ContextManager manager;
         if (!contexts.containsKey(context)) {
-        	manager = ContextManager.create(this, serverClass, context);
+        	manager = ContextManager.create(this, context);
         	contexts.put(context, manager);
         } else {
         	manager = contexts.get(context);

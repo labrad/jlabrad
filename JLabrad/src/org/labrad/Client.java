@@ -19,6 +19,7 @@
 
 package org.labrad;
 
+import java.awt.EventQueue;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
@@ -553,14 +554,18 @@ public class Client implements Connection, Serializable {
      * Handle packets coming in from the wire.
      * @param packet
      */
-    private void handlePacket(Packet packet) {
+    private void handlePacket(final Packet packet) {
         int request = packet.getRequest();
         if (request < 0) {
         	// response
             requestDispatcher.finishRequest(packet);
         } else if (request == 0) {
         	// handle incoming message
-            messageListeners.fireMessage(packet);
+        	EventQueue.invokeLater(new Runnable() {
+				public void run() {
+		            messageListeners.fireMessage(packet);					
+				}
+        	});
         } else {
         	// handle incoming request
         }

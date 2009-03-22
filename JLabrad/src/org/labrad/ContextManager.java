@@ -14,9 +14,12 @@ import org.labrad.errors.LabradException;
 
 public class ContextManager {
 	final ServerConnection connection;
-	final ServerContext server;
+	ServerContext server;
+	Context context;
 	final Object lock = new Object();
+	boolean initialized = false;
 	boolean currentlyServing = false;
+	boolean expired = false;
 	final List<Packet> requestBuffer = new ArrayList<Packet>();
 	
 	/**
@@ -28,26 +31,58 @@ public class ContextManager {
 	 * @throws InstantiationException
 	 * @throws IllegalAccessException
 	 */
-	public static ContextManager create(ServerConnection cxn,
-			Class<? extends ServerContext> serverClass, Context context)
-				throws InstantiationException, IllegalAccessException {
-		ServerContext server;
-		server = serverClass.newInstance();
-        server.setContext(context);
-        server.setConnection(cxn);
-        server.init();
-        return new ContextManager(cxn, server);
+	public static ContextManager create(ServerConnection cxn, Context context) {
+		return new ContextManager(cxn, context);
 	}
 	
-	private ContextManager(ServerConnection connection, ServerContext server) {
+	private ContextManager(ServerConnection connection, Context context) {
 		this.connection = connection;
-		this.server = server;
+		this.context = context;
 	}
+	
+	// suppose an expire message comes in.  What should we do?  We should cancel pending
+	// requests and then call the expire() function on the context and wait for it to finish.
+	// All this may take some time.  What if another request comes in in the same context before
+	// we are done?  One possibility: when we are done with the cleanup we tell the serverConnection
+	// that we are done so that it can remove us from the list.  If another request comes in before
+	// that happens, the ServerConnection will pass it along to us as it normally would.
+	// what api do these loops need?
+	// - queue up an event
+	// - cancel any pending events
+	// - wait for pending events to finish
+	// - stop the loop (and wait for pending events to finish)
+	//
+	
+	// incoming requests: synchronized for this context
+	// incoming messages: asynchronous, asynchronous with requests, or synchronous with requests
+	// how does the user specify which model to use?
+	// how is this ever going to work?
+	// should we revert back to a model like Twisted's?  Probably not so suitable for java (ugly code)
+	//
+	// have two event loops: request loop, message loop.
+	// messages can be handled in one of three ways:
+	// - dispatched to request loop (serialized with requests)
+	// - dispatched to message loop (serialized with messages)
+	// - dispatched to underlying thread pool directly (fully asynchronous)
 	
 	public void expire() {
 		// the executor will get shutdown by the server connection who owns it,
 		// so we just tell the server context object to expire itself.
 		// TODO need to fix up the concurrency here
+		// what do we actually want to do here:
+		// - wait for any pending requests to finish or expire
+		// - then tell the server to expire and wait for that to finish
+		// - do we do this in the (global) message dispatch thread, or our own current thread?
+		//
+		// the way contexts are currently implemented, each context has its own message thread,
+		// though the identity of that thread can change since we dispatch new continuations to
+		// the thread each time something happens.  Thus, we should probably abstract out an
+		// "eventQueue" implementation, and then allow each context to run it's own event dispatch
+		// thread.  That way, different contexts can communicate by dispatching to each other's
+		// event loops, as well as to the main event loop of the main server object.
+		// if desired, of course, contexts can call methods on the global server object directly
+		// in their current thread.  Could this be done with some kind of executor?  basically,
+		// we want an executor that shares a pool of threads with a set of other executors.
 		server.expire();
 	}
 	
@@ -58,12 +93,19 @@ public class ContextManager {
 	 * @param request
 	 */
 	public void serveRequest(Packet request) {
-		if (request.getRecords().size() == 0) {
-			sendResponse(request, responseFor(request));
-			return;
-		}
 		try {
-            synchronized (lock) {
+			if (!initialized) {
+				server = connection.getServerClass().newInstance();
+				server.setContext(context);
+				server.setConnection(connection);
+				server.init();
+				initialized = true;
+			}
+			if (request.getRecords().size() == 0) {
+				sendResponse(request, responseFor(request));
+				return;
+			}
+		    synchronized (lock) {
             	requestBuffer.add(request);
                 if (!currentlyServing) {
                 	currentlyServing = true;
