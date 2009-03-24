@@ -607,6 +607,7 @@ public class ServerConnection implements Connection {
 				Context ctx = e.getContext();
 				if (contexts.containsKey(ctx)) {
 					contexts.get(ctx).expire();
+					// also need to remove this context object from the context dictionary
 				}
 			}
     	});
