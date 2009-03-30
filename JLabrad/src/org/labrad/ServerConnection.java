@@ -23,6 +23,7 @@ import java.awt.EventQueue;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -252,6 +253,13 @@ public class ServerConnection implements Connection {
         connectionListeners.removeListener(listener);
     }
 
+    
+    // message handlers
+    private long nextMessageID = 1;
+    public long getMessageID() {
+    	return nextMessageID++;
+    }
+    
 
 	// networking stuff
     private Socket socket;
@@ -599,6 +607,9 @@ public class ServerConnection implements Connection {
     	// initialize the server
     	server.init();
     	
+    	// signup for named messages
+    	registerForNamedMessages();
+    	
     	// TODO we really need to fix up the concurrency here
     	Data data = Data.clusterOf(Data.valueOf(1L), Data.valueOf(false));
     	sendAndWait(Request.to("Manager").add("S: Notify on Context Expiration", data));
@@ -803,6 +814,50 @@ public class ServerConnection implements Connection {
                 dispatchTable.put(s.ID(), SettingHandlers.forMethod(m));
             }
         }
+    }
+    
+    /**
+     * Register to receive named messages for which handlers have been provided.
+     * @throws InterruptedException
+     * @throws ExecutionException
+     */
+    private void registerForNamedMessages()
+    		throws InterruptedException, ExecutionException {
+    	Request req = Request.to("Manager");
+    	// signup for messages on the server object
+    	for (Method m : server.getClass().getMethods()) {
+    		if (m.isAnnotationPresent(NamedMessageHandler.class)) {
+    			NamedMessageHandler annot = m.getAnnotation(NamedMessageHandler.class);
+    			String name = annot.value();
+    			long ID = getMessageID();
+    			addMessageListener(createMessageListener(ID, m));
+    			Data data = Data.clusterOf(Data.valueOf(name),
+    					                   Data.valueOf(ID),
+    					                   Data.valueOf(true));
+    			req.add("Subscribe to Named Message", data);
+    		}
+    	}
+    	sendAndWait(req);
+    }
+    
+    private MessageListener createMessageListener(final long ID, final Method m) {
+    	return new MessageListener() {
+			public void messageReceived(MessageEvent e) {
+				if (e.getMessageID() != ID) return;
+				try {
+					m.invoke(server, e);
+				} catch (IllegalArgumentException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (IllegalAccessException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (InvocationTargetException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+    	};
     }
     
     /**
