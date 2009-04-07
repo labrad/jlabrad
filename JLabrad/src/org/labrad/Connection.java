@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import org.labrad.data.Context;
 import org.labrad.data.Data;
 import org.labrad.data.Request;
 import org.labrad.events.MessageListener;
@@ -39,4 +40,6 @@ public interface Connection {
 
     public void addMessageListener(MessageListener listener);
     public void removeMessageListener(MessageListener listener);
+    
+    public Context newContext();
 }
