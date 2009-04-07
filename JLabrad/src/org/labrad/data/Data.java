@@ -183,6 +183,18 @@ public class Data implements Cloneable {
     	return data;
     }
     
+    public static <T> Data listOf(List<T> elements, Setter<T> setter) {
+    	Type elementType;
+    	if (elements.size() == 0) {
+    		elementType = Empty.getInstance();
+    	} else {
+    		elementType = setter.getType();
+    	}
+    	Data data = new Data(org.labrad.types.List.of(elementType));
+    	data.setList(elements, setter);
+		return data;
+	}
+    
     // static constructors for basic types
     public static Data valueOf(boolean b) { return new Data("b").setBool(b); }
     public static Data valueOf(int i) { return new Data("i").setInt(i); }
@@ -205,6 +217,44 @@ public class Data implements Cloneable {
     	return new Data("c[" + units + "]").setComplex(re, im);
     }
 
+    // static constructors for arrays of basic types
+    public static Data valueOf(boolean[] b) {
+    	Data data = Data.ofType("*b");
+    	data.setArraySize(b.length);
+    	for (int i = 0; i < b.length; i++) {
+    		data.setBool(b[i], i);
+    	}
+    	return data;
+    }
+    /*
+    public static Data valueOf(int[] i) { return new Data("i").setInt(i); }
+    public static Data valueOf(long[] w) { return new Data("w").setWord(w); }
+    */
+    public static Data valueOf(String[] s) {
+    	Data data = Data.ofType("*s");
+    	data.setArraySize(s.length);
+    	for (int i = 0; i < s.length; i++) {
+    		data.setString(s[i], i);
+    	}
+    	return data;
+    }
+    /*
+    public static Data valueOf(Date[] t) { return new Data("t").setTime(t); }
+    
+    public static Data valueOf(double[] v) {
+    	return new Data("v").setValue(v);
+    }
+    public static Data valueOf(double[] v, String units) {
+    	return new Data("v[" + units + "]").setValue(v);
+    }
+    
+    public static Data valueOf(double[] re, double[] im) {
+    	return new Data("c").setComplex(re, im);
+    }
+    public static Data valueOf(double[] re, double[] im, String units) {
+    	return new Data("c[" + units + "]").setComplex(re, im);
+    }
+    */
 
     // static constructors for specific types
     public static Data ofType(String tag) {
