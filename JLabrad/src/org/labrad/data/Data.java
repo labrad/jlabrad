@@ -218,23 +218,38 @@ public class Data implements Cloneable {
     }
 
     // static constructors for arrays of basic types
-    public static Data valueOf(boolean[] b) {
+    public static Data valueOf(boolean[] a) {
     	Data data = Data.ofType("*b");
-    	data.setArraySize(b.length);
-    	for (int i = 0; i < b.length; i++) {
-    		data.setBool(b[i], i);
+    	data.setArraySize(a.length);
+    	for (int i = 0; i < a.length; i++) {
+    		data.setBool(a[i], i);
     	}
     	return data;
     }
-    /*
-    public static Data valueOf(int[] i) { return new Data("i").setInt(i); }
-    public static Data valueOf(long[] w) { return new Data("w").setWord(w); }
-    */
-    public static Data valueOf(String[] s) {
+    
+    public static Data valueOf(int[] a) {
+    	Data data = Data.ofType("*i");
+    	data.setArraySize(a.length);
+    	for (int i = 0; i < a.length; i++) {
+    		data.setInt(a[i], i);
+    	}
+    	return data;
+    }
+    
+    public static Data valueOf(long[] a) {
+    	Data data = Data.ofType("*w");
+    	data.setArraySize(a.length);
+    	for (int i = 0; i < a.length; i++) {
+    		data.setWord(a[i], i);
+    	}
+    	return data;
+    }
+    
+    public static Data valueOf(String[] a) {
     	Data data = Data.ofType("*s");
-    	data.setArraySize(s.length);
-    	for (int i = 0; i < s.length; i++) {
-    		data.setString(s[i], i);
+    	data.setArraySize(a.length);
+    	for (int i = 0; i < a.length; i++) {
+    		data.setString(a[i], i);
     	}
     	return data;
     }
