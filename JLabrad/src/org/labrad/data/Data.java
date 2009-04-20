@@ -1138,12 +1138,25 @@ public class Data implements Cloneable {
 	    return this;
 	}
 
+	// array getters
+	public long[] getWordArray() {
+		getSubtype(Type.Code.LIST);
+		getSubtype(Type.Code.WORD, 0);
+		int len = getArraySize();
+		long[] result = new long[len];
+		for (int i = 0; i < len; i++) {
+			result[i] = get(i).getWord();
+		}
+		return result;
+	}
+	
 	// vectorized getters
 	public <T> List<T> getList(Getter<T> getter) {
 		getSubtype(Type.Code.LIST);
 		getSubtype(getter.getType().getCode(), 0);
+		int len = getArraySize();
 		List<T> result = new ArrayList<T>();
-		for (int i = 0; i < getArraySize(); i++) {
+		for (int i = 0; i < len; i++) {
 			result.add(getter.get(get(i)));
 		}
 		return result;
