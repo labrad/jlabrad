@@ -1139,6 +1139,17 @@ public class Data implements Cloneable {
 	}
 
 	// array getters
+	public int[] getIntArray() {
+		getSubtype(Type.Code.LIST);
+		getSubtype(Type.Code.INT, 0);
+		int len = getArraySize();
+		int[] result = new int[len];
+		for (int i = 0; i < len; i++) {
+			result[i] = get(i).getInt();
+		}
+		return result;
+	}
+	
 	public long[] getWordArray() {
 		getSubtype(Type.Code.LIST);
 		getSubtype(Type.Code.WORD, 0);
