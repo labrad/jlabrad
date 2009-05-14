@@ -155,7 +155,7 @@ public class Client implements Connection, Serializable {
      * Get the ID assigned by the manager after connecting to LabRAD.
 	 * @return the iD
 	 */
-	public long getID() {
+	public long getId() {
 		return ID;
 	}
 

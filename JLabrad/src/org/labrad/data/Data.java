@@ -245,6 +245,24 @@ public class Data implements Cloneable {
     	return data;
     }
     
+    public static Data valueOf(double[] a) {
+    	Data data = Data.ofType("*v");
+    	data.setArraySize(a.length);
+    	for (int i = 0; i < a.length; i++) {
+    		data.setValue(a[i], i);
+    	}
+    	return data;
+    }
+    
+    public static Data valueOf(double[] a, String units) {
+    	Data data = Data.ofType("*v[" + units + "]");
+    	data.setArraySize(a.length);
+    	for (int i = 0; i < a.length; i++) {
+    		data.setValue(a[i], i);
+    	}
+    	return data;
+    }
+    
     public static Data valueOf(String[] a) {
     	Data data = Data.ofType("*s");
     	data.setArraySize(a.length);
@@ -824,7 +842,7 @@ public class Data implements Cloneable {
 		getSubtype(Type.Code.INT);
 	    return Bytes.getInt(getOffset());
 	}
-
+    
 	public long getWord() {
 		getSubtype(Type.Code.WORD);
 	    return Bytes.getWord(getOffset());
@@ -1157,6 +1175,17 @@ public class Data implements Cloneable {
 		long[] result = new long[len];
 		for (int i = 0; i < len; i++) {
 			result[i] = get(i).getWord();
+		}
+		return result;
+	}
+	
+	public double[] getValueArray() {
+		getSubtype(Type.Code.LIST);
+		getSubtype(Type.Code.VALUE, 0);
+		int len = getArraySize();
+		double[] result = new double[len];
+		for (int i = 0; i < len; i++) {
+			result[i] = get(i).getValue();
 		}
 		return result;
 	}

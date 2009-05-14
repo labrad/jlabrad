@@ -42,4 +42,5 @@ public interface Connection {
     public void removeMessageListener(MessageListener listener);
     
     public Context newContext();
+    public long getId();
 }

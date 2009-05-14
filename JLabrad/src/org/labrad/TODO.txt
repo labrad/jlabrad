@@ -17,12 +17,14 @@ Deployment
 
 Client
 - provide a means to clear the server/setting cache
+  - in particular, clear the cache when a server disconnects
 
 Data
 - add get* and set* methods that do not check types for use with vectorization
 
 General
-- flatten/unflatten data outside of network threads, so exceptions will not kill the them
+- flatten data outside the network thread, so that exceptions do not kill the network thread (and for performance)
+- unflatten data in the network thread, because an error here _should_ kill the connection
 - try to write things as interfaces, rather than concrete types.
 - implement connection object, server, client, etc. as beans (ala delphi API)
 
