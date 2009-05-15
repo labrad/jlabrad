@@ -1157,6 +1157,17 @@ public class Data implements Cloneable {
 	}
 
 	// array getters
+	public boolean[] getBoolArray() {
+		getSubtype(Type.Code.LIST);
+		getSubtype(Type.Code.BOOL, 0);
+		int len = getArraySize();
+		boolean[] result = new boolean[len];
+		for (int i = 0; i < len; i++) {
+			result[i] = get(i).getBool();
+		}
+		return result;
+	}
+	
 	public int[] getIntArray() {
 		getSubtype(Type.Code.LIST);
 		getSubtype(Type.Code.INT, 0);
