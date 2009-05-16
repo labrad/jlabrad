@@ -22,6 +22,7 @@ package org.labrad.data;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,8 +42,10 @@ import org.labrad.types.Type;
  * capabilities of LabVIEW, from National Instruments.  Each piece of LabRAD
  * data has a Type object which is specified by a String type tag.
  */
-public class Data implements Cloneable {
-    public static final String STRING_ENCODING = "ISO-8859-1";
+public class Data implements Serializable, Cloneable {
+    private static final long serialVersionUID = 1L;
+	
+	public static final String STRING_ENCODING = "ISO-8859-1";
     public static final Data EMPTY = new Data("");
     
     // time
@@ -384,6 +387,17 @@ public class Data implements Cloneable {
         return type;
     }
 
+    /**
+     * Test whether this data object matches the given type.
+     */
+    public boolean matchesType(Type type) {
+    	return getType().matches(type);
+    }
+    
+    public boolean matchesType(String tag) {
+    	return getType().matches(tag);
+    }
+    
     /**
      * Get the LabRAD type tag string of this data object.
      * 
@@ -1202,6 +1216,16 @@ public class Data implements Cloneable {
 	}
 	
 	// vectorized getters
+	public List<Data> getDataList() {
+		getSubtype(Type.Code.LIST);
+		int len = getArraySize();
+		List<Data> result = new ArrayList<Data>();
+		for (int i = 0; i < len; i++) {
+			result.add(get(i));
+		}
+		return result;
+	}
+	
 	public <T> List<T> getList(Getter<T> getter) {
 		getSubtype(Type.Code.LIST);
 		getSubtype(getter.getType().getCode(), 0);
