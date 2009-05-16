@@ -36,6 +36,8 @@ public interface ServerContext {
     void setServer(Server server);
     Server getServer();
     
+    ServerContext getServerContext(Context context);
+    
     void setConnection(Connection cxn);
     Connection getConnection();
     

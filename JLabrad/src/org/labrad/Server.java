@@ -19,6 +19,8 @@
 
 package org.labrad;
 
+import org.labrad.data.Context;
+
 
 /**
  *
@@ -28,6 +30,8 @@ public interface Server {
 	void setConnection(Connection cxn);
     Connection getConnection();
 	
+    ServerContext getServerContext(Context context);
+    
 	void init();
 	void shutdown();
 }

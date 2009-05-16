@@ -723,6 +723,13 @@ public class ServerConnection implements Connection {
         return manager;
     }
     
+    /**
+     * FIXME this is a hack to allow contexts to communicate
+     */
+    protected ServerContext getServerContext(Context context) {
+    	return getContextManager(context).getServerContext();
+    }
+    
     /** Thread pool for serving requests. */
     private final ExecutorService requestExecutor = Executors.newFixedThreadPool(100);
     public void submit(Runnable task) {

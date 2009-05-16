@@ -40,6 +40,10 @@ public abstract class AbstractServerContext implements ServerContext {
     public void setServer(Server server) { this.server = server; }
     public Server getServer() { return server; }
     
+    public ServerContext getServerContext(Context context) {
+    	return getServer().getServerContext(context);
+    }
+    
     private Connection connection;
     public void setConnection(Connection cxn) { connection = cxn; }
     public Connection getConnection() { return connection; }

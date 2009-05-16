@@ -40,6 +40,10 @@ public class ContextManager {
 		this.context = context;
 	}
 	
+	protected ServerContext getServerContext() {
+		return server;
+	}
+	
 	// suppose an expire message comes in.  What should we do?  We should cancel pending
 	// requests and then call the expire() function on the context and wait for it to finish.
 	// All this may take some time.  What if another request comes in in the same context before
