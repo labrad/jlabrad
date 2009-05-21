@@ -8,6 +8,8 @@ Server
 - make server class BE the context object (static vs. instance methods and vars)
 - handle context expiration messages
 - when an error happens inside a setting, include info in the returned message (which setting, etc.)
+- more convenient setting definitions (per-argument type annotations, overloads, etc.)
+- generate code to call settings at runtime (rather than using reflection)
 
 Deployment
 - how to deploy JLabrad to developers
@@ -27,6 +29,7 @@ General
 - unflatten data in the network thread, because an error here _should_ kill the connection
 - try to write things as interfaces, rather than concrete types.
 - implement connection object, server, client, etc. as beans (ala delphi API)
+- easier way to get at the results of a packet call, rather than indexing into the result
 
 Examples
 - write some example clients and servers
