@@ -44,7 +44,7 @@ public final class Value extends Type {
     public boolean matches(Type type) {
     	return (type instanceof Any) ||
     	       (type instanceof Value &&
-    	    		   (type.getUnits() == null || type.getUnits() == getUnits()));
+    	    		   (type.getUnits() == null || type.getUnits().equals(getUnits())));
     }
     
     public Type.Code getCode() { return Type.Code.VALUE; }
