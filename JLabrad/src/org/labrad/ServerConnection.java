@@ -30,7 +30,6 @@ import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -764,9 +763,7 @@ public class ServerConnection implements Connection {
     private Data getLoginData() {
     	Class<?> cls = server.getClass();
     	if (!cls.isAnnotationPresent(ServerInfo.class)) {
-    		String name = cls.getName();
-    		String message = "Server class '" + name + "' needs @ServerInfo annotation.";
-    		throw new RuntimeException(message);
+    		Failure.fail("Server class '%s' needs @ServerInfo annotation.", cls.getName());
     	}
         ServerInfo info = cls.getAnnotation(ServerInfo.class);
         String name = info.name();
@@ -800,7 +797,13 @@ public class ServerConnection implements Connection {
      * those settings.  This table is constructed after logging in but
      * before we begin serving.
      */
-    private Map<Long, SettingHandler> dispatchTable = new HashMap<Long, SettingHandler>();
+    private final Map<Long, SettingHandler> dispatchTable = new HashMap<Long, SettingHandler>();
+    
+    /**
+     * Get a handler for a particular setting ID
+     * @param ID
+     * @return
+     */
     public SettingHandler getHandler(final long ID) {
     	return dispatchTable.get(ID);
     }
@@ -816,9 +819,8 @@ public class ServerConnection implements Connection {
                 Setting s = m.getAnnotation(Setting.class);
                 if (dispatchTable.containsKey(s.ID())) {
                     Setting other = dispatchTable.get(s.ID()).getSettingInfo();
-                	String msg = "Setting ID " + s.ID() + " used by two settings: "
-                	           + "'" + s.name() + "' and '" + other.name() + "'."; 
-                    throw new RuntimeException(msg);
+                	Failure.fail("Setting ID %s used by two settings: '%s' and '%s'.",
+                				 s.ID(), s.name(), other.name());
                 }
                 dispatchTable.put(s.ID(), SettingHandlers.forMethod(m));
             }
@@ -878,15 +880,7 @@ public class ServerConnection implements Connection {
             throws InterruptedException, ExecutionException {
     	Request registrations = Request.to("Manager");
         for (SettingHandler handler : dispatchTable.values()) {
-            Setting s = handler.getSettingInfo();
-            Data data = Data.ofType("wss*s*ss");
-            data.get(0).setWord(s.ID());
-            data.get(1).setString(s.name());
-            data.get(2).setString(s.description());
-            data.get(3).setStringList(Arrays.asList(s.accepts()));
-            data.get(4).setStringList(Arrays.asList(s.returns()));
-            data.get(5).setString(s.notes());
-            registrations.add("S: Register Setting", data);
+            registrations.add("S: Register Setting", handler.getRegistrationInfo());
         }
         sendAndWait(registrations);
     }

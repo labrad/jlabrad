@@ -9,6 +9,7 @@ Server
 - handle context expiration messages
 - when an error happens inside a setting, include info in the returned message (which setting, etc.)
 - more convenient setting definitions (per-argument type annotations, overloads, etc.)
+  - unpack into lists or arrays of primitives and/or Data (from clusters or lists)
 - generate code to call settings at runtime (rather than using reflection)
 
 Deployment
