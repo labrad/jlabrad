@@ -2,8 +2,8 @@ package org.labrad.handlers;
 
 import java.lang.reflect.Method;
 
-import org.labrad.Setting;
 import org.labrad.SettingHandler;
+import org.labrad.annotations.Setting;
 
 public abstract class AbstractHandler implements SettingHandler {
 	Method method;

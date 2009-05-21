@@ -21,6 +21,7 @@ package org.labrad;
 
 import java.lang.reflect.Method;
 
+import org.labrad.annotations.Setting;
 import org.labrad.handlers.BasicSettingHandler;
 import org.labrad.handlers.NoArgHandler;
 import org.labrad.handlers.NoArgNoReturnHandler;

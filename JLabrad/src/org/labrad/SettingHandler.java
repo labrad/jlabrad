@@ -19,6 +19,7 @@
 
 package org.labrad;
 
+import org.labrad.annotations.Setting;
 import org.labrad.data.Data;
 
 public interface SettingHandler {

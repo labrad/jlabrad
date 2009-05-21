@@ -19,6 +19,8 @@
 
 package org.labrad;
 
+import org.labrad.annotations.ServerInfo;
+
 /*
  * A very basic skeleton for a server to test the JLabrad API.
  * 

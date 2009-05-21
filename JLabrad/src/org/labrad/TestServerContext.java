@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import org.labrad.annotations.Setting;
 import org.labrad.data.Data;
 import org.labrad.data.Hydrant;
 import org.labrad.data.Request;

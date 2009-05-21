@@ -3,7 +3,7 @@ package org.labrad.handlers;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import org.labrad.Setting;
+import org.labrad.annotations.Setting;
 import org.labrad.data.Data;
 
 public class NoArgHandler extends AbstractHandler {

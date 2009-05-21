@@ -45,6 +45,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.labrad.annotations.ServerInfo;
+import org.labrad.annotations.Setting;
 import org.labrad.data.Context;
 import org.labrad.data.Data;
 import org.labrad.data.Packet;
