@@ -9,14 +9,14 @@ import org.labrad.annotations.Setting;
 import org.labrad.data.Data;
 
 public class ZeroArgHandler extends AbstractHandler {
-	private final static List<String> EMPTY_ONLY = new ArrayList<String>();
+	public final static List<String> EMPTY_ONLY = new ArrayList<String>();
 	
 	static {
 		EMPTY_ONLY.add("");
 	}
 	
-	public ZeroArgHandler(Method method, Setting setting) {
-		super(method, setting, EMPTY_ONLY);
+	public ZeroArgHandler(Method method, Setting setting, List<String> returnedTypes) {
+		super(method, setting, EMPTY_ONLY, returnedTypes);
 	}
 	
 	public Data handle(Object obj, Data data) throws Throwable {

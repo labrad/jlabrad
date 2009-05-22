@@ -25,9 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import org.labrad.annotations.Accepts;
 import org.labrad.annotations.Returns;
 import org.labrad.annotations.Setting;
-import org.labrad.annotations.Units;
 import org.labrad.data.Data;
 import org.labrad.data.Hydrant;
 import org.labrad.data.Request;
@@ -121,7 +121,7 @@ public class TestServerContext extends AbstractServerContext {
      * @param data
      * @return
      */
-    @Setting(ID=1, name="Echo", description="Echoes back any data sent to this setting.")
+    @Setting(ID=1, name="Echo", doc="Echoes back any data sent to this setting.")
     public Data echo(Data data) {
         log("Echo", data);
         return data;
@@ -134,8 +134,8 @@ public class TestServerContext extends AbstractServerContext {
      * @return
      * @throws InterruptedException
      */
-    @Setting(ID=2, name="Delayed Echo", description="Echoes back data after a specified delay.")
-    public Data delayedEcho(@Units("s") double delay, Data payload) throws InterruptedException {
+    @Setting(ID=2, name="Delayed Echo", doc="Echoes back data after a specified delay.")
+    public Data delayedEcho(@Accepts("v[s]") double delay, Data payload) throws InterruptedException {
     	log("Delayed Echo (%g seconds): %s", delay, payload.pretty());
     	Thread.sleep((long)(delay*1000));
     	return payload;
@@ -147,7 +147,7 @@ public class TestServerContext extends AbstractServerContext {
      * @param data
      * @return
      */
-    @Setting(ID=3, name="Set", description="Sets a key value pair in the current context.")
+    @Setting(ID=3, name="Set", doc="Sets a key value pair in the current context.")
     public Data set(String key, Data value) {
         log("Set: %s = %s", key, value);
         registry.put(key, value);
@@ -160,7 +160,7 @@ public class TestServerContext extends AbstractServerContext {
      * @param data
      * @return
      */
-    @Setting(ID=4, name="Get", description="Gets a key from the current context.")
+    @Setting(ID=4, name="Get", doc="Gets a key from the current context.")
     public Data get(String key) {
         log("Get: %s", key);
         if (!registry.containsKey(key)) {
@@ -175,7 +175,7 @@ public class TestServerContext extends AbstractServerContext {
      * @param data
      * @return
      */
-    @Setting(ID=5, name="Get All", description="Gets all of the key-value pairs defined in this context.")
+    @Setting(ID=5, name="Get All", doc="Gets all of the key-value pairs defined in this context.")
     public Data getAll() {
         log("Get All");
         List<Data> items = new ArrayList<Data>();
@@ -191,7 +191,7 @@ public class TestServerContext extends AbstractServerContext {
      * @param data
      * @return
      */
-    @Setting(ID=6, name="Keys", description="Returns a list of all keys defined in this context.")
+    @Setting(ID=6, name="Keys", doc="Returns a list of all keys defined in this context.")
     @Returns("*s")
     public Data getKeys() {
         log("Keys");
@@ -203,7 +203,7 @@ public class TestServerContext extends AbstractServerContext {
      * Remove a key from this context
      * @param key
      */
-    @Setting(ID=7, name="Remove", description="Removes the specified key from this context.")
+    @Setting(ID=7, name="Remove", doc="Removes the specified key from this context.")
     public void remove(String key) {
     	log("Remove: %s", key);
     	registry.remove(key);
@@ -216,9 +216,9 @@ public class TestServerContext extends AbstractServerContext {
      * @return
      */
     @Setting(ID=8, name="Get Random Data",
-             description="Returns random LabRAD data.\n\n" +
-             		     "If a type is specified, the data will be of that type; " +
-             		     "otherwise it will be of a random type.")
+             doc="Returns random LabRAD data.\n\n" +
+                 "If a type is specified, the data will be of that type; " +
+                 "otherwise it will be of a random type.")
     public Data getRandomData(String type) {
         log("Get Random Data: %s", type);
     	return Hydrant.getRandomData(type);
@@ -240,7 +240,7 @@ public class TestServerContext extends AbstractServerContext {
      * @throws ExecutionException
      */
     @Setting(ID=9, name="Get Random Data Remote",
-            description="Fetches random data by making a request to the python test server.")
+             doc="Fetches random data by making a request to the python test server.")
     public Data getRandomDataRemote(String type) throws InterruptedException, ExecutionException {
         log("Get Random Data Remote: %s", type);
         return makeRequest("Python Test Server", "Get Random Data", Data.valueOf(type));
@@ -260,7 +260,7 @@ public class TestServerContext extends AbstractServerContext {
      * @throws ExecutionException
      */
     @Setting(ID=10, name="Forward Request",
-             description="Forwards a request on to another server, specified by name and setting.")
+             doc="Forwards a request on to another server, specified by name and setting.")
     public Data forwardRequest(String server, String setting, Data payload)
     		throws InterruptedException, ExecutionException {
         log("Forward Request: server='%s', setting='%s', payload=%s", server, setting, payload);
@@ -269,23 +269,19 @@ public class TestServerContext extends AbstractServerContext {
     
     // commented annotations will give errors
     
-    @Setting(ID=11, name="Test No Args", description="")
-    //@Setting(ID=11, name="Test No Args", accepts="s", description="")
+    @Setting(ID=11, name="Test No Args", doc="")
     @Returns("b")
     public Data noArgs() {
     	log("Test No Args");
     	return Data.valueOf(true);
     }
     
-    @Setting(ID=12, name="Test No Return", description="")
-    //@Setting(ID=12, name="Test No Return", accepts="?", description="")
+    @Setting(ID=12, name="Test No Return", doc="")
     public void noReturn(Data data) {
     	log("Test No Return", data);
     }
     
-    @Setting(ID=13, name="Test No Args No Return", description="")
-    //@Setting(ID=13, name="Test No Args No Return", returns="", description="")
-    //@Setting(ID=13, name="Test No Args No Return", returns="s", description="")
+    @Setting(ID=13, name="Test No Args No Return", doc="")
     public void noArgsNoReturn() {
     	log("Test No Args No Return");
     }

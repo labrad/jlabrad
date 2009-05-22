@@ -1215,6 +1215,27 @@ public class Data implements Serializable, Cloneable {
 		return result;
 	}
 	
+	public String[] getStringArray() {
+		getSubtype(Type.Code.LIST);
+		getSubtype(Type.Code.STR, 0);
+		int len = getArraySize();
+		String[] result = new String[len];
+		for (int i = 0; i < len; i++) {
+			result[i] = get(i).getString();
+		}
+		return result;
+	}
+	
+	public Data[] getDataArray() {
+		getSubtype(Type.Code.LIST);
+		int len = getArraySize();
+		Data[] result = new Data[len];
+		for (int i = 0; i < len; i++) {
+			result[i] = get(i);
+		}
+		return result;
+	}
+	
 	// vectorized getters
 	public List<Data> getDataList() {
 		getSubtype(Type.Code.LIST);

@@ -14,7 +14,7 @@ public class SingleArgVoidHandler extends AbstractHandler {
 	
 	@SuppressWarnings("unchecked")
 	public SingleArgVoidHandler(Method method, Setting setting, List<String> accepts, Getter getter) {
-		super(method, setting, accepts);
+		super(method, setting, accepts, ZeroArgHandler.EMPTY_ONLY);
 		this.getter = getter;
 	}
 	

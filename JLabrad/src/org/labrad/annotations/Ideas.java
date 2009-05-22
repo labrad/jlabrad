@@ -12,7 +12,7 @@ public class Ideas {
 	public void doSomething(boolean a) {
 	}
 	
-	public void doSomething(@Units("m/s") double speed) {
+	public void doSomething(@Accepts("v[m/s]") double speed) {
 	}
 	
 	public @Returns("sss") Data doSomething() {

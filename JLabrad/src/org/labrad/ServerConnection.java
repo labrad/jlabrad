@@ -46,6 +46,7 @@ import java.util.regex.Pattern;
 
 import org.labrad.annotations.ServerInfo;
 import org.labrad.annotations.Setting;
+import org.labrad.annotations.SettingOverload;
 import org.labrad.data.Context;
 import org.labrad.data.Data;
 import org.labrad.data.Packet;
@@ -61,6 +62,11 @@ import org.labrad.events.MessageListener;
 import org.labrad.events.MessageListenerSupport;
 import org.labrad.util.LookupProvider;
 import org.labrad.util.Util;
+
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  *
@@ -814,17 +820,50 @@ public class ServerConnection implements Connection {
      * to manage calling these various settings.
      */
     private void locateSettings() {
+    	// because of overloading, there may be multiple methods with the same name and different
+    	// calling signatures, all of which need to get dispatched to by the same handler.
+    	
+    	Map<String, Method> settingsByName = Maps.newHashMap();
+    	Map<Long, Method> settingsById = Maps.newHashMap();
+    	Map<String, Method> methodMap = Maps.newHashMap();
+    	ListMultimap<String, Method> overloadMap = ArrayListMultimap.create();
+    	
     	for (Method m : serverClass.getMethods()) {
-            if (m.isAnnotationPresent(Setting.class)) {
-                Setting s = m.getAnnotation(Setting.class);
-                if (dispatchTable.containsKey(s.ID())) {
-                    Setting other = dispatchTable.get(s.ID()).getSettingInfo();
-                	Failure.fail("Setting ID %s used by two settings: '%s' and '%s'.",
-                				 s.ID(), s.name(), other.name());
+    		if (m.isAnnotationPresent(Setting.class)) {
+    			// only one overload of a method can have @Setting annotation 
+    			if (methodMap.containsKey(m.getName())) {
+                	Failure.fail("Multiple overloaded methods '%s' have @Setting annotation", m.getName());
                 }
-                dispatchTable.put(s.ID(), SettingHandlers.forMethod(m));
+
+    			// setting IDs and names must be unique
+    			Setting s = m.getAnnotation(Setting.class);
+    			if (settingsById.containsKey(s.ID())) {
+    				Failure.fail("Multiple settings with id %d", s.ID());
+    			}
+    			if (settingsByName.containsKey(s.name())) {
+    				Failure.fail("Multiple settings with name '%s'", s.name());
+    			}
+    			
+    			// store this method
+    			methodMap.put(m.getName(), m);
+    			
+            } else if (m.isAnnotationPresent(SettingOverload.class)) {
+            	overloadMap.put(m.getName(), m);
             }
         }
+    	
+    	// build handlers for sets of overloaded methods and add them to the dispatch table
+    	for (String name : methodMap.keySet()) {
+    		// create a list of all the overloaded methods
+    		Method m = methodMap.get(name);
+    		List<Method> overloads = Lists.newArrayList(m);
+    		overloads.addAll(overloadMap.get(name));
+    		Setting s = m.getAnnotation(Setting.class);
+
+    		// build the setting handler and add it to the dispatch table
+    		SettingHandler handler = SettingHandlers.forMethods(s, overloads);
+    		dispatchTable.put(s.ID(), handler);
+    	}
     }
     
     /**

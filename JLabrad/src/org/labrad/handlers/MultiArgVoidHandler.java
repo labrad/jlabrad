@@ -15,7 +15,7 @@ public class MultiArgVoidHandler extends AbstractHandler {
 	
 	@SuppressWarnings("unchecked")
 	public MultiArgVoidHandler(Method method, Setting setting, List<String> acceptedTypes, List<Getter> getters) {
-		super(method, setting, acceptedTypes);
+		super(method, setting, acceptedTypes, ZeroArgHandler.EMPTY_ONLY);
 		this.getters = getters;
 		nArgs = getters.size();
 	}
@@ -26,9 +26,10 @@ public class MultiArgVoidHandler extends AbstractHandler {
 			Object[] args = new Object[nArgs];
 			for (int i = 0; i < nArgs; i++) {
 				Getter g = getters.get(i);
-				args[i] = g != null ? g.get(data.get(i)) : data;
+				Data arg = data.get(i);
+				args[i] = g != null ? g.get(arg) : arg;
 			}
-			getMethod().invoke(obj, data);
+			getMethod().invoke(obj, args);
 		} catch (IllegalArgumentException e) {
 			throw e;
 		} catch (IllegalAccessException e) {

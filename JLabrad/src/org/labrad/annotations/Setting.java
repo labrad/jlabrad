@@ -33,6 +33,6 @@ import java.lang.annotation.Target;
 public @interface Setting {
     long ID();
     String name();
-    String description();
+    String doc();
     String notes() default "";
 }

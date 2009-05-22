@@ -11,8 +11,8 @@ import org.labrad.data.Getter;
 public class SingleArgHandler extends AbstractHandler {
 	private final Getter getter;
 	
-	public SingleArgHandler(Method method, Setting setting, List<String> acceptedTypes, Getter getter) {
-		super(method, setting, acceptedTypes);
+	public SingleArgHandler(Method method, Setting setting, List<String> acceptedTypes, List<String> returnedTypes, Getter getter) {
+		super(method, setting, acceptedTypes, returnedTypes);
 		this.getter = getter;
 	}
 	
