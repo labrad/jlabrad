@@ -793,7 +793,7 @@ public class ServerConnection implements Connection {
         Data data = Data.ofType("wsss");
         data.get(0).setWord(Constants.PROTOCOL);
         data.get(1).setString(name);
-        data.get(2).setString(info.description());
+        data.get(2).setString(info.doc());
         data.get(3).setString(info.notes());
         return data;
     }

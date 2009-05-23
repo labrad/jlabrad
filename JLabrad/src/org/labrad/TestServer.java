@@ -27,7 +27,7 @@ import org.labrad.annotations.ServerInfo;
  * Most of the logic for this server is in the TestServerContext class.
  */
 @ServerInfo(name="Java Test Server",
-        	description="Basic server to test JLabrad API.",
+        	doc="Basic server to test JLabrad API.",
         	notes="Not much else to say, really.")
 public class TestServer extends AbstractServer {
 	public void init() {
