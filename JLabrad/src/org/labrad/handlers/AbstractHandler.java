@@ -30,7 +30,7 @@ public abstract class AbstractHandler implements SettingHandler {
 	
 	public Data getRegistrationInfo() {
 		Data data = Data.ofType("wss*s*ss");
-        data.get(0).setWord(setting.ID());
+        data.get(0).setWord(setting.id());
         data.get(1).setString(setting.name());
         data.get(2).setString(setting.doc());
         data.get(3).setStringList(accepts);

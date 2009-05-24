@@ -837,8 +837,8 @@ public class ServerConnection implements Connection {
 
     			// setting IDs and names must be unique
     			Setting s = m.getAnnotation(Setting.class);
-    			if (settingsById.containsKey(s.ID())) {
-    				Failure.fail("Multiple settings with id %d", s.ID());
+    			if (settingsById.containsKey(s.id())) {
+    				Failure.fail("Multiple settings with id %d", s.id());
     			}
     			if (settingsByName.containsKey(s.name())) {
     				Failure.fail("Multiple settings with name '%s'", s.name());
@@ -862,7 +862,7 @@ public class ServerConnection implements Connection {
 
     		// build the setting handler and add it to the dispatch table
     		SettingHandler handler = SettingHandlers.forMethods(s, overloads);
-    		dispatchTable.put(s.ID(), handler);
+    		dispatchTable.put(s.id(), handler);
     	}
     }
     
