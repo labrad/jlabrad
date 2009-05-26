@@ -1249,9 +1249,10 @@ public class Data implements Serializable, Cloneable {
 	
 	public <T> List<T> getList(Getter<T> getter) {
 		getSubtype(Type.Code.LIST);
-		getSubtype(getter.getType().getCode(), 0);
 		int len = getArraySize();
 		List<T> result = new ArrayList<T>();
+		if (len == 0) return result;
+		getSubtype(getter.getType().getCode(), 0);
 		for (int i = 0; i < len; i++) {
 			result.add(getter.get(get(i)));
 		}
