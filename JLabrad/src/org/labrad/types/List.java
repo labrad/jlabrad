@@ -59,10 +59,15 @@ public final class List extends Type {
     }
 
     public String toString() {
+    	// FIXME this is a bit of a hack to get empty lists to flatten properly in some circumstances
+    	String elemStr = elementType.toString();
+    	if (elementType == Empty.getInstance()) {
+    		elemStr = "_";
+    	}
         if (depth == 1) {
-            return "*" + elementType.toString();
+            return "*" + elemStr;
         }
-        return "*" + Integer.toString(depth) + elementType.toString();
+        return "*" + Integer.toString(depth) + elemStr;
     }
 
     public String pretty() {
