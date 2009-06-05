@@ -1,16 +1,15 @@
 JLabrad TODOs:
 
 Server
-- global server object
+- setting definitions
+  - unpack arbitrarily complicated LabRAD types into structural Java types
+  - make the constructed accepted type tags more pretty
+- when an error happens inside a setting, include info in the returned message (which setting, etc.)
 - message handlers (per context or global)
+  - allow message handlers to be created declaratively, using annotations to set dispatch policy, etc.
 - create server bean
 - have connection bean fire RequestEvent
-- make server class BE the context object (static vs. instance methods and vars)
 - handle context expiration messages
-- when an error happens inside a setting, include info in the returned message (which setting, etc.)
-- more convenient setting definitions (per-argument type annotations, overloads, etc.)
-  - unpack into lists or arrays of primitives and/or Data (from clusters or lists)
-  - make the constructed accepted type tags more pretty
 - generate code to call settings at runtime (rather than using reflection)
 
 Deployment
@@ -21,7 +20,7 @@ Deployment
 
 Client
 - provide a means to clear the server/setting cache
-  - in particular, clear the cache when a server disconnects
+  - clear the cache automatically when a server disconnects
 
 Data
 - add get* and set* methods that do not check types for use with vectorization
@@ -32,6 +31,7 @@ General
 - try to write things as interfaces, rather than concrete types.
 - implement connection object, server, client, etc. as beans (ala delphi API)
 - easier way to get at the results of a packet call, rather than indexing into the result
+  for example, each addRecord call returns a Future<Data> that can be queried separately
 
 Examples
 - write some example clients and servers
