@@ -9,8 +9,10 @@ import org.labrad.data.Data;
 import org.labrad.data.Getter;
 
 public class SingleArgHandler extends AbstractHandler {
+	@SuppressWarnings("unchecked")
 	private final Getter getter;
 	
+	@SuppressWarnings("unchecked")
 	public SingleArgHandler(Method method, Setting setting, List<String> acceptedTypes, List<String> returnedTypes, Getter getter) {
 		super(method, setting, acceptedTypes, returnedTypes);
 		this.getter = getter;

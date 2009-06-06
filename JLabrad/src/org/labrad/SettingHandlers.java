@@ -392,8 +392,8 @@ public class SettingHandlers {
 	private static List<Type> getReturnedTypes(Method m) {
 		// TODO properly check return types and potentially provide setters for them
 		List<Type> ans = Lists.newArrayList();
-		Class<?> cls = m.getReturnType();
-		Annotation[] annotations = m.getAnnotations();
+		//Class<?> cls = m.getReturnType();
+		//Annotation[] annotations = m.getAnnotations();
 		if (m.getReturnType() == Void.TYPE) {
 			ans.add(Type.fromTag(""));
 		}
