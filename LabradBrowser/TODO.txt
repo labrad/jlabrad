@@ -1,4 +1,5 @@
-- deployment
+- update node settings in UI (directories, extensions, packages)
+- streamline deployment
 - visual indication when connection to LabRAD is lost
 - update credentials on the fly from the registry
 
