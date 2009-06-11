@@ -1,13 +1,16 @@
+- display unmanaged servers
+- display server info (settings, help text, etc.)
+
 - update node settings in UI (directories, extensions, packages)
+- add registry editing capabilities (use the manager to parse data)
+  - items to add set new keys/dirs and delete old keys/dirs
+
+- use https
+
+- add wiring editor
+
 - streamline deployment
 - visual indication when connection to LabRAD is lost
 - update credentials on the fly from the registry
 
-- display unmanaged servers
-- display server info (settings, help text, etc.)
-
-- add registry editing capabilities (use the manager to parse data)
-  - items to add set new keys/dirs and delete old keys/dirs
-
-- add wiring editor
 
