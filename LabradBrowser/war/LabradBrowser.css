@@ -21,6 +21,10 @@ table {
 
 .gwt-TabPanelBottom { padding: 10px 15px 10px 15px; }
 
+.gwt-Tree .gwt-TreeItem-selected { background-color: #ccccff; }
+.new-item { color: #999999; }
+
+.unselected-textbox { border: 0px; color: #999999; }
 .centered-cell { text-align: center; }
 .padded-cell { padding-right: 15px; padding-left: 15px; }
 .server-group { padding-right: 5px; padding-left: 5px; font-weight: bold; }
