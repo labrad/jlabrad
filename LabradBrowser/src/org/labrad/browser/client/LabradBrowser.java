@@ -14,8 +14,13 @@ import com.google.gwt.user.client.ui.TabPanel;
 public class LabradBrowser implements EntryPoint {
 	public void onModuleLoad() {
 		// page names
-		final String[] pageNames = {"nodes", "registry", "security", "log"};
-		//final String[] pageNames = {"nodes", "security", "log"};
+		boolean useRegistry = false;
+		final String[] pageNames;
+		if (useRegistry) {
+			pageNames = new String[] {"nodes", "registry", "security", "log"};
+		} else {
+			pageNames = new String[] {"nodes", "security", "log"};
+		}
 		
 		// build mapping from page names to page numbers
 		final Map<String, Integer> pageNumbers = Util.newHashMap();
@@ -30,7 +35,9 @@ public class LabradBrowser implements EntryPoint {
         // populate the tab panel
         int page = 0;
         tabs.add(new ControlPanel(), pageNames[page++]);
-        tabs.add(new RegistryEditor(), pageNames[page++]);
+        if (useRegistry) {
+        	tabs.add(new RegistryEditor(), pageNames[page++]);
+        }
         tabs.add(new IpListControl(), pageNames[page++]);        
         tabs.add(LogWindow.getInstance(), pageNames[page++]);
         

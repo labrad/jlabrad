@@ -65,4 +65,28 @@ public interface NodeImageBundle extends ImageBundle {
      */
     @Resource("org/labrad/browser/images/cross.gif")
     public AbstractImagePrototype ipDisallowed();
+    
+    /**
+     * Folder in the registry
+     */
+    @Resource("org/labrad/browser/images/folder.png")
+    public AbstractImagePrototype folder();
+    
+    /**
+     * Folder add
+     */
+    @Resource("org/labrad/browser/images/folder_add.png")
+    public AbstractImagePrototype folderAdd();
+    
+    /**
+     * Key in the registry
+     */
+    @Resource("org/labrad/browser/images/key.png")
+    public AbstractImagePrototype key();
+    
+    /**
+     * Key add
+     */
+    @Resource("org/labrad/browser/images/key_add.png")
+    public AbstractImagePrototype keyAdd();
 }
