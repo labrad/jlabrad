@@ -30,6 +30,7 @@ import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -918,7 +919,14 @@ public class ServerConnection implements Connection {
     private void registerSettings()
             throws InterruptedException, ExecutionException {
     	Request registrations = Request.to("Manager");
-        for (SettingHandler handler : dispatchTable.values()) {
+    	List<Long> idList = Lists.newArrayList(dispatchTable.keySet());
+    	long[] ids = new long[idList.size()];
+    	for (int i = 0; i < ids.length; i++) {
+    		ids[i] = idList.get(i);
+    	}
+    	Arrays.sort(ids);
+    	for (long id : ids) {
+        	SettingHandler handler = dispatchTable.get(id);
             registrations.add("S: Register Setting", handler.getRegistrationInfo());
         }
         sendAndWait(registrations);
