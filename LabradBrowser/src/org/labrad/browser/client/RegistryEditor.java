@@ -368,6 +368,5 @@ public class RegistryEditor extends Composite
 	
 	public void onSelection(SelectionEvent<TreeItem> event) {
 		// TODO Auto-generated method stub
-		
 	}
 }
