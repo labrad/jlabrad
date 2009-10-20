@@ -23,7 +23,7 @@ import org.labrad.annotations.Setting;
 import org.labrad.data.Data;
 
 public interface SettingHandler {
-	public Setting getSettingInfo();
-	public Data getRegistrationInfo();
-	public Data handle(Object obj, Data data) throws Throwable;
+  public Setting getSettingInfo();
+  public Data getRegistrationInfo();
+  public Data handle(Object obj, Data data) throws Throwable;
 }

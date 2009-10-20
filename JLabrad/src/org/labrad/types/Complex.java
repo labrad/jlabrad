@@ -20,40 +20,40 @@
 package org.labrad.types;
 
 public final class Complex extends Type {
-    String units;
+  String units;
 
-    /**
-     * Factory to create a complex types with the specified units.
-     * Note that units can be null, indicating no units.  This is
-     * different from the empty string "", which means a dimensionless
-     * quantity.
-     */
-    public static Complex of(String units) {
-    	return new Complex(units);
-    }
-    
-    private Complex(String units) { this.units = units; }
+  /**
+   * Factory to create a complex types with the specified units.
+   * Note that units can be null, indicating no units.  This is
+   * different from the empty string "", which means a dimensionless
+   * quantity.
+   */
+  public static Complex of(String units) {
+    return new Complex(units);
+  }
 
-    public boolean isFixedWidth() { return true; }
+  private Complex(String units) { this.units = units; }
 
-    public int dataWidth() { return 16; }
+  public boolean isFixedWidth() { return true; }
 
-    public String getUnits() { return units; }
+  public int dataWidth() { return 16; }
 
-    public boolean matches(Type type) {
-    	return (type instanceof Any) ||
-    	       (type instanceof Complex &&
-    	    		   (type.getUnits() == null || type.getUnits() == getUnits()));
-    }
-    
-    public Type.Code getCode() { return Type.Code.COMPLEX; }
-    public char getChar() { return 'c'; }
+  public String getUnits() { return units; }
 
-    public String toString() {
-    	return "c" + (units == null ? "" : "[" + units + "]");
-    }
+  public boolean matches(Type type) {
+    return (type instanceof Any) ||
+    (type instanceof Complex &&
+        (type.getUnits() == null || type.getUnits() == getUnits()));
+  }
 
-    public String pretty() {
-    	return "complex" + (units == null ? "" : "[" + units + "]");
-    }
+  public Type.Code getCode() { return Type.Code.COMPLEX; }
+  public char getChar() { return 'c'; }
+
+  public String toString() {
+    return "c" + (units == null ? "" : "[" + units + "]");
+  }
+
+  public String pretty() {
+    return "complex" + (units == null ? "" : "[" + units + "]");
+  }
 }

@@ -33,14 +33,14 @@ import org.labrad.events.MessageListener;
  * @author maffoo
  */
 public interface Connection {
-    Future<List<Data>> send(final Request request);
-    Future<List<Data>> send(final Request request, final RequestCallback callback);
-    List<Data> sendAndWait(Request request) throws InterruptedException, ExecutionException;
-    void sendMessage(final Request request) throws InterruptedException, ExecutionException;
+  Future<List<Data>> send(final Request request);
+  Future<List<Data>> send(final Request request, final RequestCallback callback);
+  List<Data> sendAndWait(Request request) throws InterruptedException, ExecutionException;
+  void sendMessage(final Request request) throws InterruptedException, ExecutionException;
 
-    public void addMessageListener(MessageListener listener);
-    public void removeMessageListener(MessageListener listener);
-    
-    public Context newContext();
-    public long getId();
+  public void addMessageListener(MessageListener listener);
+  public void removeMessageListener(MessageListener listener);
+
+  public Context newContext();
+  public long getId();
 }

@@ -26,6 +26,6 @@ import java.util.EventListener;
  * @author maffoo
  */
 public interface ConnectionListener extends EventListener {
-    public void connected(ConnectionEvent evt);
-    public void disconnected(ConnectionEvent evt);
+  public void connected(ConnectionEvent evt);
+  public void disconnected(ConnectionEvent evt);
 }

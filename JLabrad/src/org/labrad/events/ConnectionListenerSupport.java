@@ -25,18 +25,18 @@ package org.labrad.events;
  * @author Matthew Neeley
  */
 public class ConnectionListenerSupport extends ListenerSupport<ConnectionListener> {
-    public ConnectionListenerSupport(Object source) {
-        super(source);
+  public ConnectionListenerSupport(Object source) {
+    super(source);
+  }
+  public void fireConnected() {
+    for (ConnectionListener listener : listeners) {
+      listener.connected(new ConnectionEvent(source));
     }
-    public void fireConnected() {
-        for (ConnectionListener listener : listeners) {
-            listener.connected(new ConnectionEvent(source));
-        }
+  }
+  public void fireDisconnected() {
+    for (ConnectionListener listener : listeners) {
+      listener.disconnected(new ConnectionEvent(source));
     }
-    public void fireDisconnected() {
-        for (ConnectionListener listener : listeners) {
-            listener.disconnected(new ConnectionEvent(source));
-        }
-    }
+  }
 
 }

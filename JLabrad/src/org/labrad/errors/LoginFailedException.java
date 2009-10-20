@@ -24,9 +24,9 @@ package org.labrad.errors;
  * @author maffoo
  */
 public class LoginFailedException extends Exception {
-    private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L;
 
-    public LoginFailedException(Throwable cause) {
-        super(cause);
-    }
+  public LoginFailedException(Throwable cause) {
+    super(cause);
+  }
 }

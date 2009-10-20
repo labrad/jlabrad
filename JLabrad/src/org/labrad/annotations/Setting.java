@@ -31,8 +31,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface Setting {
-    long id();
-    String name();
-    String doc();
-    String notes() default "";
+  long id();
+  String name();
+  String doc();
+  String notes() default "";
 }

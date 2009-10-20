@@ -20,20 +20,20 @@
 package org.labrad.types;
 
 public final class Empty extends Type {
-    private static Empty instance = new Empty();
+  private static Empty instance = new Empty();
 
-    // private constructor to prevent instantiation
-    private Empty() {}
+  // private constructor to prevent instantiation
+  private Empty() {}
 
-    public static Empty getInstance() { return instance; }
+  public static Empty getInstance() { return instance; }
 
-    public boolean matches(Type type) {
-    	return (type instanceof Any) || (type instanceof Empty);
-    }
-    
-    public Type.Code getCode() { return Type.Code.EMPTY; }
-    public char getChar() { return '_'; }
+  public boolean matches(Type type) {
+    return (type instanceof Any) || (type instanceof Empty);
+  }
 
-    public String toString() { return ""; }
-    public String pretty() { return "empty"; }
+  public Type.Code getCode() { return Type.Code.EMPTY; }
+  public char getChar() { return '_'; }
+
+  public String toString() { return ""; }
+  public String pretty() { return "empty"; }
 }

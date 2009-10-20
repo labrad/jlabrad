@@ -26,12 +26,12 @@ import java.util.EventObject;
  * @author Matthew Neeley
  */
 public class ContextEvent extends EventObject {
-    /**
-	 *
-	 */
-	private static final long serialVersionUID = 1L;
+  /**
+   *
+   */
+  private static final long serialVersionUID = 1L;
 
-	public ContextEvent(Object source) {
-        super(source);
-    }
+  public ContextEvent(Object source) {
+    super(source);
+  }
 }

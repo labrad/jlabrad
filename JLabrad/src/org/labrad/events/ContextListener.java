@@ -26,6 +26,6 @@ import java.util.EventListener;
  * @author maffoo
  */
 public interface ContextListener extends EventListener {
-    public void newContext(ContextEvent evt);
-    public void expireContext(ContextEvent evt);
+  public void newContext(ContextEvent evt);
+  public void expireContext(ContextEvent evt);
 }

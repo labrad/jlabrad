@@ -31,7 +31,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface ServerInfo {
-    String name();
-    String doc();
-    String notes() default "";
+  String name();
+  String doc();
+  String notes() default "";
 }

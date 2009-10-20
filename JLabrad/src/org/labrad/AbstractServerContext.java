@@ -26,28 +26,28 @@ import org.labrad.data.Context;
  * @author maffoo
  */
 public abstract class AbstractServerContext implements ServerContext {
-    public AbstractServerContext() {}
+  public AbstractServerContext() {}
 
-    private long source;
-    public void setSource(long source) { this.source = source; }
-    public long getSource() { return source; }
+  private long source;
+  public void setSource(long source) { this.source = source; }
+  public long getSource() { return source; }
 
-    private Context context;
-    public void setContext(Context context) { this.context = context; }
-    public Context getContext() { return context; }
+  private Context context;
+  public void setContext(Context context) { this.context = context; }
+  public Context getContext() { return context; }
 
-    private Server server;
-    public void setServer(Server server) { this.server = server; }
-    public Server getServer() { return server; }
-    
-    public ServerContext getServerContext(Context context) {
-    	return getServer().getServerContext(context);
-    }
-    
-    private Connection connection;
-    public void setConnection(Connection cxn) { connection = cxn; }
-    public Connection getConnection() { return connection; }
-    
-    public abstract void init();
-    public abstract void expire();
+  private Server server;
+  public void setServer(Server server) { this.server = server; }
+  public Server getServer() { return server; }
+
+  public ServerContext getServerContext(Context context) {
+    return getServer().getServerContext(context);
+  }
+
+  private Connection connection;
+  public void setConnection(Connection cxn) { connection = cxn; }
+  public Connection getConnection() { return connection; }
+
+  public abstract void init();
+  public abstract void expire();
 }

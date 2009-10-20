@@ -20,23 +20,23 @@
 package org.labrad.types;
 
 public final class Bool extends Type {
-    private static Bool instance = new Bool();
+  private static Bool instance = new Bool();
 
-    // private constructor to prevent instantiation
-    private Bool() {}
-    
-    public static Bool getInstance() { return instance; }
+  // private constructor to prevent instantiation
+  private Bool() {}
 
-    public boolean matches(Type type) {
-    	return (type instanceof Any) || (type instanceof Bool);
-    }
-    
-    public Type.Code getCode() { return Type.Code.BOOL; }
-    public char getChar() { return 'b'; }
+  public static Bool getInstance() { return instance; }
 
-    public boolean isFixedWidth() { return true; }
-    public int dataWidth() { return 1; }
+  public boolean matches(Type type) {
+    return (type instanceof Any) || (type instanceof Bool);
+  }
 
-    public String toString() { return "b"; }
-    public String pretty() { return "bool"; }
+  public Type.Code getCode() { return Type.Code.BOOL; }
+  public char getChar() { return 'b'; }
+
+  public boolean isFixedWidth() { return true; }
+  public int dataWidth() { return 1; }
+
+  public String toString() { return "b"; }
+  public String pretty() { return "bool"; }
 }

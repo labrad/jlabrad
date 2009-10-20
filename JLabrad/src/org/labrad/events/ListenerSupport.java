@@ -28,22 +28,22 @@ import java.util.List;
  * @author maffoo
  */
 public class ListenerSupport<T extends EventListener> {
-    List<T> listeners = new ArrayList<T>();
-    Object source;
+  List<T> listeners = new ArrayList<T>();
+  Object source;
 
-    public ListenerSupport(Object source) {
-        this.source = source;
-    }
+  public ListenerSupport(Object source) {
+    this.source = source;
+  }
 
-    public void addListener(T listener) {
-        if (!listeners.contains(listener)) {
-            listeners.add(listener);
-        }
+  public void addListener(T listener) {
+    if (!listeners.contains(listener)) {
+      listeners.add(listener);
     }
+  }
 
-    public void removeListener(T listener) {
-        if (listeners.contains(listener)) {
-            listeners.remove(listener);
-        }
+  public void removeListener(T listener) {
+    if (listeners.contains(listener)) {
+      listeners.remove(listener);
     }
+  }
 }

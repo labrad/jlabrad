@@ -26,19 +26,19 @@ import org.labrad.annotations.ServerInfo;
  * 
  * Most of the logic for this server is in the TestServerContext class.
  */
-@ServerInfo(name="Java Test Server",
-        	doc="Basic server to test JLabrad API.",
-        	notes="Not much else to say, really.")
+@ServerInfo(name = "Java Test Server",
+            doc = "Basic server to test JLabrad API.",
+            notes = "Not much else to say, really.")
 public class TestServer extends AbstractServer {
-	public void init() {
-		System.out.println("init() called on server.");
-	}
-	
-	public void shutdown() {
-		System.out.println("shutdown() called on server.");
-	}
-	
-    public static void main(String[] args) {
-    	Servers.runServer(TestServer.class, TestServerContext.class, args);
-    }
+  public void init() {
+    System.out.println("init() called on server.");
+  }
+
+  public void shutdown() {
+    System.out.println("shutdown() called on server.");
+  }
+
+  public static void main(String[] args) {
+    Servers.runServer(TestServer.class, TestServerContext.class, args);
+  }
 }

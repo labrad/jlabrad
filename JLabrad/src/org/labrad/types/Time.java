@@ -20,25 +20,25 @@
 package org.labrad.types;
 
 public final class Time extends Type {
-    private static Time instance = new Time();
+  private static Time instance = new Time();
 
-    // private constructor to prevent instantiation
-    private Time() {}
-    
-    public static Time getInstance() { return instance; }
+  // private constructor to prevent instantiation
+  private Time() {}
 
-    public boolean matches(Type type) {
-    	return (type instanceof Any) || (type instanceof Time);
-    }
-    
-    public Type.Code getCode() { return Type.Code.TIME; }
-    public char getChar() { return 't'; }
+  public static Time getInstance() { return instance; }
 
-    public boolean isFixedWidth() { return true; }
+  public boolean matches(Type type) {
+    return (type instanceof Any) || (type instanceof Time);
+  }
 
-    public int dataWidth() { return 16; }
+  public Type.Code getCode() { return Type.Code.TIME; }
+  public char getChar() { return 't'; }
 
-    public String toString() { return "t"; }
+  public boolean isFixedWidth() { return true; }
 
-    public String pretty() { return "time"; }
+  public int dataWidth() { return 16; }
+
+  public String toString() { return "t"; }
+
+  public String pretty() { return "time"; }
 }

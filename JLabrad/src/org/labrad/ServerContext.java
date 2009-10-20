@@ -27,20 +27,20 @@ import org.labrad.data.Context;
  * @author maffoo
  */
 public interface ServerContext {
-	void setSource(long source);
-    long getSource();
+  void setSource(long source);
+  long getSource();
 
-	void setContext(Context context);
-    Context getContext();
+  void setContext(Context context);
+  Context getContext();
 
-    void setServer(Server server);
-    Server getServer();
-    
-    ServerContext getServerContext(Context context);
-    
-    void setConnection(Connection cxn);
-    Connection getConnection();
-    
-    void init();
-    void expire();
+  void setServer(Server server);
+  Server getServer();
+
+  ServerContext getServerContext(Context context);
+
+  void setConnection(Connection cxn);
+  Connection getConnection();
+
+  void init();
+  void expire();
 }

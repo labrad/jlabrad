@@ -20,20 +20,20 @@
 package org.labrad.types;
 
 public final class Any extends Type {
-    private static Any instance = new Any();
+  private static Any instance = new Any();
 
-    // private constructor to prevent instantiation
-    private Any() { }
-    
-    public static Any getInstance() { return instance; }
+  // private constructor to prevent instantiation
+  private Any() { }
 
-    public boolean matches(Type type) {
-    	return (type instanceof Any);
-    }
-    
-    public Type.Code getCode() { return Type.Code.ANY; }
-    public char getChar() { return '?'; }
+  public static Any getInstance() { return instance; }
 
-    public String toString() { return "?"; }
-    public String pretty() { return "any"; }
+  public boolean matches(Type type) {
+    return (type instanceof Any);
+  }
+
+  public Type.Code getCode() { return Type.Code.ANY; }
+  public char getChar() { return '?'; }
+
+  public String toString() { return "?"; }
+  public String pretty() { return "any"; }
 }

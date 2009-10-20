@@ -20,79 +20,79 @@
 package org.labrad.types;
 
 public final class List extends Type {
-    Type elementType;
+  Type elementType;
 
-    int depth;
+  int depth;
 
-    /**
-     * Factory to create a list containing elements of the specified
-     * type and with the specified depth (number of dimensions.
-     * @param elementType
-     * @param depth
-     * @return
-     */
-    public static List of(Type elementType, int depth) {
-    	return new List(elementType, depth);
+  /**
+   * Factory to create a list containing elements of the specified
+   * type and with the specified depth (number of dimensions.
+   * @param elementType
+   * @param depth
+   * @return
+   */
+  public static List of(Type elementType, int depth) {
+    return new List(elementType, depth);
+  }
+
+  /**
+   * Factory to create a one-dimensional list of the specified type.
+   * @param elementType
+   * @return
+   */
+  public static List of(Type elementType) {
+    return new List(elementType, 1);
+  }
+
+  /**
+   * Constructor for lists of any depth. Lists are multidimensional,
+   * rectangular, and homogeneous (all elements have the same type).
+   * 
+   * @param elementType
+   *            The LabRAD type of each element of the list.
+   * @param depth
+   *            The depth (number of dimensions) of the list.
+   */
+  private List(Type elementType, int depth) {
+    this.elementType = elementType;
+    this.depth = depth;
+  }
+
+  public String toString() {
+    // FIXME this is a bit of a hack to get empty lists to flatten properly in some circumstances
+    String elemStr = elementType.toString();
+    if (elementType == Empty.getInstance()) {
+      elemStr = "_";
     }
-    
-    /**
-     * Factory to create a one-dimensional list of the specified type.
-     * @param elementType
-     * @return
-     */
-    public static List of(Type elementType) {
-    	return new List(elementType, 1);
+    if (depth == 1) {
+      return "*" + elemStr;
     }
-    
-    /**
-     * Constructor for lists of any depth. Lists are multidimensional,
-     * rectangular, and homogeneous (all elements have the same type).
-     * 
-     * @param elementType
-     *            The LabRAD type of each element of the list.
-     * @param depth
-     *            The depth (number of dimensions) of the list.
-     */
-    private List(Type elementType, int depth) {
-        this.elementType = elementType;
-        this.depth = depth;
+    return "*" + Integer.toString(depth) + elemStr;
+  }
+
+  public String pretty() {
+    if (depth == 1) {
+      return "list(" + elementType.pretty() + ")";
     }
+    return "list(" + elementType.pretty() + ", " + Integer.toString(depth)
+    + ")";
+  }
 
-    public String toString() {
-    	// FIXME this is a bit of a hack to get empty lists to flatten properly in some circumstances
-    	String elemStr = elementType.toString();
-    	if (elementType == Empty.getInstance()) {
-    		elemStr = "_";
-    	}
-        if (depth == 1) {
-            return "*" + elemStr;
-        }
-        return "*" + Integer.toString(depth) + elemStr;
-    }
+  public boolean matches(Type type) {
+    if (type instanceof Any) return true;
+    if (!(type instanceof List)) return false;
+    if (type.getDepth() != getDepth()) return false;
+    return getSubtype(0).matches(type.getSubtype(0));
+  }
 
-    public String pretty() {
-        if (depth == 1) {
-            return "list(" + elementType.pretty() + ")";
-        }
-        return "list(" + elementType.pretty() + ", " + Integer.toString(depth)
-                + ")";
-    }
+  public Type.Code getCode() { return Type.Code.LIST; }
+  public char getChar() { return '*'; }
 
-    public boolean matches(Type type) {
-    	if (type instanceof Any) return true;
-    	if (!(type instanceof List)) return false;
-    	if (type.getDepth() != getDepth()) return false;
-    	return getSubtype(0).matches(type.getSubtype(0));
-    }
-    
-    public Type.Code getCode() { return Type.Code.LIST; }
-    public char getChar() { return '*'; }
+  public int getDepth() { return depth; }
 
-    public int getDepth() { return depth; }
+  public boolean isFixedWidth() { return false; }
+  public int dataWidth() { return 4 * depth + 4; }
 
-    public boolean isFixedWidth() { return false; }
-    public int dataWidth() { return 4 * depth + 4; }
-
-    public Type getSubtype(int index) { return elementType; }
-    public int getOffset(int index) { return index * elementType.dataWidth(); }
+  public Type getSubtype(int index) { return elementType; }
+  public int getOffset(int index) { return index * elementType.dataWidth(); }
 }

@@ -25,17 +25,17 @@ package org.labrad.events;
  * @author Matthew Neeley
  */
 public class ContextListenerSupport extends ListenerSupport<ContextListener> {
-    public ContextListenerSupport(Object source) {
-        super(source);
+  public ContextListenerSupport(Object source) {
+    super(source);
+  }
+  public void fireNewContext() {
+    for (ContextListener listener : listeners) {
+      listener.newContext(new ContextEvent(source));
     }
-    public void fireNewContext() {
-        for (ContextListener listener : listeners) {
-            listener.newContext(new ContextEvent(source));
-        }
+  }
+  public void fireDisconnected() {
+    for (ContextListener listener : listeners) {
+      listener.expireContext(new ContextEvent(source));
     }
-    public void fireDisconnected() {
-        for (ContextListener listener : listeners) {
-            listener.expireContext(new ContextEvent(source));
-        }
-    }
+  }
 }

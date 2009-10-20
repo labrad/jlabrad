@@ -28,29 +28,29 @@ import org.labrad.data.Data;
  */
 public class RequestContext<T> {
 
-    private Context context;
-    private long source;
-    private T data;
+  private Context context;
+  private long source;
+  private T data;
 
-    public RequestContext(Context context, long source, T data) {
-        this.context = context;
-        this.source = source;
-        this.data = data;
-    }
+  public RequestContext(Context context, long source, T data) {
+    this.context = context;
+    this.source = source;
+    this.data = data;
+  }
 
-    public long getSource() {
-        return source;
-    }
+  public long getSource() {
+    return source;
+  }
 
-    public Context getContext() {
-        return context;
-    }
+  public Context getContext() {
+    return context;
+  }
 
-    public T getData() {
-        return data;
-    }
+  public T getData() {
+    return data;
+  }
 
-    public void finish(Data data) {
-        
-    }
+  public void finish(Data data) {
+
+  }
 }

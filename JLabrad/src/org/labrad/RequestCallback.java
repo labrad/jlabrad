@@ -29,17 +29,17 @@ import org.labrad.data.Request;
  * @author maffoo
  */
 public interface RequestCallback {
-    /**
-     * Called when the request completes successfully.
-     * @param request
-     * @param response
-     */
-    void onSuccess(Request request, List<Data> response);
+  /**
+   * Called when the request completes successfully.
+   * @param request
+   * @param response
+   */
+  void onSuccess(Request request, List<Data> response);
 
-    /**
-     * Called when the request fails.
-     * @param request
-     * @param cause
-     */
-    void onFailure(Request request, Throwable cause);
+  /**
+   * Called when the request fails.
+   * @param request
+   * @param cause
+   */
+  void onFailure(Request request, Throwable cause);
 }

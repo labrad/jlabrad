@@ -24,9 +24,9 @@ package org.labrad.errors;
  * @author maffoo
  */
 public class LookupFailedException extends Exception {
-    private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L;
 
-    public LookupFailedException(Throwable cause) {
-        super(cause);
-    }
+  public LookupFailedException(Throwable cause) {
+    super(cause);
+  }
 }

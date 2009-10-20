@@ -26,5 +26,5 @@ import java.util.EventListener;
  * @author maffoo
  */
 public interface MessageListener extends EventListener {
-    public void messageReceived(MessageEvent e);
+  public void messageReceived(MessageEvent e);
 }

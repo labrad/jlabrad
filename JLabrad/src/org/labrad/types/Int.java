@@ -20,23 +20,23 @@
 package org.labrad.types;
 
 public final class Int extends Type {
-    private static Int instance = new Int();
+  private static Int instance = new Int();
 
-    // private constructor to prevent instantiation
-    private Int() {}
+  // private constructor to prevent instantiation
+  private Int() {}
 
-    public static Int getInstance() { return instance; }
+  public static Int getInstance() { return instance; }
 
-    public boolean matches(Type type) {
-    	return (type instanceof Any) || (type instanceof Int);
-    }
-    
-    public Type.Code getCode() { return Type.Code.INT; }
-    public char getChar() { return 'i'; }
+  public boolean matches(Type type) {
+    return (type instanceof Any) || (type instanceof Int);
+  }
 
-    public boolean isFixedWidth() { return true; }
-    public int dataWidth() { return 4; }
+  public Type.Code getCode() { return Type.Code.INT; }
+  public char getChar() { return 'i'; }
 
-    public String toString() { return "i"; }
-    public String pretty() { return "int"; }
+  public boolean isFixedWidth() { return true; }
+  public int dataWidth() { return 4; }
+
+  public String toString() { return "i"; }
+  public String pretty() { return "int"; }
 }

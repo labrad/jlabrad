@@ -29,35 +29,35 @@ import org.labrad.data.Data;
  * @author Matthew Neeley
  */
 public class MessageEvent extends EventObject {
-    /**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
-	private Context context;
-	private long srcID, msgID;
-	private Data data;
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 1L;
+  private Context context;
+  private long srcID, msgID;
+  private Data data;
 
-    public MessageEvent(Object source, Context context, long srcID, long msgID, Data data) {
-        super(source);
-        this.context = context;
-        this.srcID = srcID;
-        this.msgID = msgID;
-        this.data = data;
-    }
+  public MessageEvent(Object source, Context context, long srcID, long msgID, Data data) {
+    super(source);
+    this.context = context;
+    this.srcID = srcID;
+    this.msgID = msgID;
+    this.data = data;
+  }
 
-    public Context getContext() {
-    	return context;
-    }
-    
-    public long getSourceID() {
-    	return srcID;
-    }
-    
-    public long getMessageID() {
-    	return msgID;
-    }
-    
-    public Data getData() {
-    	return data;
-    }
+  public Context getContext() {
+    return context;
+  }
+
+  public long getSourceID() {
+    return srcID;
+  }
+
+  public long getMessageID() {
+    return msgID;
+  }
+
+  public Data getData() {
+    return data;
+  }
 }

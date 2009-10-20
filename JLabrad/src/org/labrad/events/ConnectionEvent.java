@@ -26,12 +26,12 @@ import java.util.EventObject;
  * @author Matthew Neeley
  */
 public class ConnectionEvent extends EventObject {
-    /**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 1L;
 
-	public ConnectionEvent(Object source) {
-        super(source);
-    }
+  public ConnectionEvent(Object source) {
+    super(source);
+  }
 }
