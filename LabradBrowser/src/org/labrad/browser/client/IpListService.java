@@ -7,7 +7,7 @@ import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
 
 @RemoteServiceRelativePath("ip")
 public interface IpListService extends RemoteService {
-	public List<IpAddress> getIpList();
-	public List<IpAddress> addToWhitelist(String ip);
-	public List<IpAddress> addToBlacklist(String ip);
+  public List<IpAddress> getIpList();
+  public List<IpAddress> addToWhitelist(String ip);
+  public List<IpAddress> addToBlacklist(String ip);
 }

@@ -5,60 +5,60 @@ import java.util.List;
 
 @SuppressWarnings("serial")
 public class NodeServerStatus implements Serializable {
-	private String name;
-	private String description;
-	private String version;
-	private String instanceName;
-	private List<String> environmentVars;
-	private List<String> instances;
-	
-    public NodeServerStatus() {}
-    
-    public void setName(String name) {
-		this.name = name;
-	}
+  private String name;
+  private String description;
+  private String version;
+  private String instanceName;
+  private List<String> environmentVars;
+  private List<String> instances;
 
-	public void setDescription(String description) {
-		this.description = description;
-	}
+  public NodeServerStatus() {}
 
-	public void setVersion(String version) {
-		this.version = version;
-	}
+  public void setName(String name) {
+    this.name = name;
+  }
 
-	public void setInstanceName(String instanceName) {
-		this.instanceName = instanceName;
-	}
+  public void setDescription(String description) {
+    this.description = description;
+  }
 
-	public void setEnvironmentVars(List<String> environmentVars) {
-		this.environmentVars = environmentVars;
-	}
+  public void setVersion(String version) {
+    this.version = version;
+  }
 
-	public void setInstances(List<String> instances) {
-		this.instances = instances;
-	}
+  public void setInstanceName(String instanceName) {
+    this.instanceName = instanceName;
+  }
 
-	public String getName() {
-		return name;
-	}
+  public void setEnvironmentVars(List<String> environmentVars) {
+    this.environmentVars = environmentVars;
+  }
 
-	public String getDescription() {
-		return description;
-	}
+  public void setInstances(List<String> instances) {
+    this.instances = instances;
+  }
 
-	public String getVersion() {
-		return version;
-	}
+  public String getName() {
+    return name;
+  }
 
-	public String getInstanceName() {
-		return instanceName;
-	}
+  public String getDescription() {
+    return description;
+  }
 
-	public List<String> getEnvironmentVars() {
-		return environmentVars;
-	}
+  public String getVersion() {
+    return version;
+  }
 
-	public List<String> getInstances() {
-		return instances;
-	}
+  public String getInstanceName() {
+    return instanceName;
+  }
+
+  public List<String> getEnvironmentVars() {
+    return environmentVars;
+  }
+
+  public List<String> getInstances() {
+    return instances;
+  }
 }

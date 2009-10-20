@@ -4,89 +4,89 @@ import com.google.gwt.user.client.ui.AbstractImagePrototype;
 import com.google.gwt.user.client.ui.ImageBundle;
 
 public interface NodeImageBundle extends ImageBundle {
-	/**
-     * Server information.
-     */
-	@Resource("org/labrad/browser/images/information.gif")
-    public AbstractImagePrototype serverInfoIcon();
-    
-    /**
-     * Server information (disabled).
-     */
-    @Resource("org/labrad/browser/images/information_gray.gif")
-    public AbstractImagePrototype serverInfoIconDisabled();
-    
-	/**
-	 * Start a server.
-	 */
-    @Resource("org/labrad/browser/images/add.gif")
-	public AbstractImagePrototype startServerIcon();
+  /**
+   * Server information.
+   */
+  @Resource("org/labrad/browser/images/information.gif")
+  public AbstractImagePrototype serverInfoIcon();
 
-	/**
-	 * Start a server (button disabled).
-	 */
-    @Resource("org/labrad/browser/images/add_gray.gif")
-	public AbstractImagePrototype startServerIconDisabled();
-	
+  /**
+   * Server information (disabled).
+   */
+  @Resource("org/labrad/browser/images/information_gray.gif")
+  public AbstractImagePrototype serverInfoIconDisabled();
 
-	/**
-	 * Restart a server.
-	 */
-    @Resource("org/labrad/browser/images/arrow_refresh.gif")
-	public AbstractImagePrototype restartServerIcon();
+  /**
+   * Start a server.
+   */
+  @Resource("org/labrad/browser/images/add.gif")
+  public AbstractImagePrototype startServerIcon();
 
-	/**
-	 * Restart a server (button disabled).
-	 */
-    @Resource("org/labrad/browser/images/arrow_refresh_gray.gif")
-	public AbstractImagePrototype restartServerIconDisabled();
+  /**
+   * Start a server (button disabled).
+   */
+  @Resource("org/labrad/browser/images/add_gray.gif")
+  public AbstractImagePrototype startServerIconDisabled();
 
-	
-	/**
-	 * Stop a server.
-	 */
-    @Resource("org/labrad/browser/images/delete.gif")
-	public AbstractImagePrototype stopServerIcon();
 
-	/**
-	 * Stop a server (button disabled).
-	 */
-    @Resource("org/labrad/browser/images/delete_gray.gif")
-	public AbstractImagePrototype stopServerIconDisabled();
-    
-    /**
-     * IP address on the white list
-     */
-    @Resource("org/labrad/browser/images/tick.gif")
-    public AbstractImagePrototype ipAllowed();
-    
-    /**
-     * IP address on the black list
-     */
-    @Resource("org/labrad/browser/images/cross.gif")
-    public AbstractImagePrototype ipDisallowed();
-    
-    /**
-     * Folder in the registry
-     */
-    @Resource("org/labrad/browser/images/folder.png")
-    public AbstractImagePrototype folder();
-    
-    /**
-     * Folder add
-     */
-    @Resource("org/labrad/browser/images/folder_add.png")
-    public AbstractImagePrototype folderAdd();
-    
-    /**
-     * Key in the registry
-     */
-    @Resource("org/labrad/browser/images/key.png")
-    public AbstractImagePrototype key();
-    
-    /**
-     * Key add
-     */
-    @Resource("org/labrad/browser/images/key_add.png")
-    public AbstractImagePrototype keyAdd();
+  /**
+   * Restart a server.
+   */
+  @Resource("org/labrad/browser/images/arrow_refresh.gif")
+  public AbstractImagePrototype restartServerIcon();
+
+  /**
+   * Restart a server (button disabled).
+   */
+  @Resource("org/labrad/browser/images/arrow_refresh_gray.gif")
+  public AbstractImagePrototype restartServerIconDisabled();
+
+
+  /**
+   * Stop a server.
+   */
+  @Resource("org/labrad/browser/images/delete.gif")
+  public AbstractImagePrototype stopServerIcon();
+
+  /**
+   * Stop a server (button disabled).
+   */
+  @Resource("org/labrad/browser/images/delete_gray.gif")
+  public AbstractImagePrototype stopServerIconDisabled();
+
+  /**
+   * IP address on the white list
+   */
+  @Resource("org/labrad/browser/images/tick.gif")
+  public AbstractImagePrototype ipAllowed();
+
+  /**
+   * IP address on the black list
+   */
+  @Resource("org/labrad/browser/images/cross.gif")
+  public AbstractImagePrototype ipDisallowed();
+
+  /**
+   * Folder in the registry
+   */
+  @Resource("org/labrad/browser/images/folder.png")
+  public AbstractImagePrototype folder();
+
+  /**
+   * Folder add
+   */
+  @Resource("org/labrad/browser/images/folder_add.png")
+  public AbstractImagePrototype folderAdd();
+
+  /**
+   * Key in the registry
+   */
+  @Resource("org/labrad/browser/images/key.png")
+  public AbstractImagePrototype key();
+
+  /**
+   * Key add
+   */
+  @Resource("org/labrad/browser/images/key_add.png")
+  public AbstractImagePrototype keyAdd();
 }
