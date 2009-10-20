@@ -32,6 +32,7 @@ import org.labrad.annotations.SettingOverload;
 import org.labrad.data.Data;
 import org.labrad.data.Hydrant;
 import org.labrad.data.Request;
+import org.labrad.data.Setters;
 
 /**
  *
@@ -206,9 +207,9 @@ public class TestServerContext extends AbstractServerContext {
            name = "Keys",
            doc = "Returns a list of all keys defined in this context.")
   @Returns("*s")
-  public List<String> getKeys() {
+  public Data getKeys() {
     log("Keys");
-    return new ArrayList<String>(registry.keySet());
+    return Data.listOf(new ArrayList<String>(registry.keySet()), Setters.stringSetter);
   }
 
 
@@ -288,9 +289,10 @@ public class TestServerContext extends AbstractServerContext {
   @Setting(id = 11,
            name = "Test No Args",
            doc = "")
-  public boolean noArgs() {
+  @Returns("b")
+  public Data noArgs() {
     log("Test No Args");
-    return true;
+    return Data.valueOf(true);
   }
 
   @Setting(id = 12,

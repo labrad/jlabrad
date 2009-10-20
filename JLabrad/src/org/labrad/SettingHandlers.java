@@ -75,23 +75,23 @@ public class SettingHandlers {
     // of accepted and returned types across all overloads of this method
     List<Type> accepts = Lists.newArrayList(); // list of all accepted types
     List<Type> returns = Lists.newArrayList(); // list of all returned types
-
+    
     // the overloaded handler has a map from types to single method handlers
     List<TypedHandler> handlers = Lists.newArrayList();
 
     for (Method m : overloads) {
       // get accepted types for this overload
       TypedHandler th = getHandler(m, s);
-      for (Type t : th.getTypes()) {
+      for (Type type : th.getTypes()) {
         // check each type for conflicts with types from other overloads
         for (Type other : accepts) {
-          if (t.matches(other) || other.matches(t)) {
+          if (type.matches(other) || other.matches(type)) {
             Failure.fail("Type conflict in overloads for method '%s'", m.getName());
           }
         }
         // add this type to the main list
-        accepts.add(t);
-      }				
+        accepts.add(type);
+      }
       // add this handler to the handler map
       handlers.add(th);
 
@@ -108,7 +108,7 @@ public class SettingHandlers {
             break;
           }
         }
-        if (!match) returns.add(t);
+        if (!match) { returns.add(t); }
       }
     }
 
@@ -127,10 +127,10 @@ public class SettingHandlers {
       }
       // build an OverloadedSettingHandler
       List<String> acceptedTypes = Lists.newArrayList();
-      for (Type t : accepts) acceptedTypes.add(t.toString());
+      for (Type t : accepts) { acceptedTypes.add(t.toString()); }
 
       List<String> returnedTypes = Lists.newArrayList();
-      for (Type t : returns) returnedTypes.add(t.toString());
+      for (Type t : returns) { returnedTypes.add(t.toString()); }
 
       return new OverloadedSettingHandler(s, acceptedTypes, returnedTypes, typeMap);
     }
@@ -201,13 +201,13 @@ public class SettingHandlers {
         getter = Getters.valueGetter;
         inferredType = Type.fromTag("v");
 
-        // arbitrary LabRAD data
+      // arbitrary LabRAD data
       } else if (cls.equals(Data.class)) {
         getter = null;
         inferredType = Type.fromTag("?");
 
 
-        // Array of primitives or data
+      // Array of primitives or data
       } else if (cls.equals(BOOL_ARRAY.getClass())) {
         getter = Getters.boolArrayGetter;
         inferredType = Type.fromTag("*b");
@@ -237,7 +237,7 @@ public class SettingHandlers {
         inferredType = Type.fromTag("s");
 
 
-        // List of primitives or data
+      // List of primitives or data
       } else if (cls instanceof ParameterizedType) {
         ParameterizedType paramCls = (ParameterizedType)cls;
         java.lang.reflect.Type raw = paramCls.getRawType();
@@ -246,6 +246,7 @@ public class SettingHandlers {
         if (raw.equals(List.class)) {
           java.lang.reflect.Type elem = elems[0];
 
+          // primitives
           if (elem.equals(Boolean.TYPE) || cls.equals(Boolean.class)) {
             getter = Getters.boolListGetter; 
             inferredType = Type.fromTag("*b");
@@ -262,12 +263,12 @@ public class SettingHandlers {
             getter = Getters.stringListGetter;
             inferredType = Type.fromTag("*s");
 
+          // LabRAD data
           } else if (elem.equals(Data.class)) {
             getter = Getters.dataListGetter;
             inferredType = Type.fromTag("*?");
           }
         }
-
       }
       if (inferredType == null) {
         Failure.fail("Unable to infer a LabRAD type for parameter %d of method '%s'",
@@ -310,10 +311,10 @@ public class SettingHandlers {
       case 0:
         accepts = Lists.newArrayList();
         accepts.add(Empty.getInstance());
-        if (!isVoid) {
-          handler = new ZeroArgHandler(m, s, returnedTypes);
-        } else {
+        if (isVoid) {
           handler = new ZeroArgVoidHandler(m, s);
+        } else {
+          handler = new ZeroArgHandler(m, s, returnedTypes);          
         }
         break;
 
@@ -322,10 +323,10 @@ public class SettingHandlers {
         for (Type t : accepts) {
           acceptedTypes.add(t.toString());
         }
-        if (!isVoid) {
-          handler = new SingleArgHandler(m, s, acceptedTypes, returnedTypes, getters.get(0));
-        } else {
+        if (isVoid) {
           handler = new SingleArgVoidHandler(m, s, acceptedTypes, getters.get(0));
+        } else {
+          handler = new SingleArgHandler(m, s, acceptedTypes, returnedTypes, getters.get(0));
         }
         break;
 
@@ -334,10 +335,10 @@ public class SettingHandlers {
         for (Type t : accepts) {
           acceptedTypes.add(t.toString());
         }
-        if (!isVoid) {
-          handler = new MultiArgHandler(m, s, acceptedTypes, returnedTypes, getters);
-        } else {
+        if (isVoid) {
           handler = new MultiArgVoidHandler(m, s, acceptedTypes, getters);
+        } else {
+          handler = new MultiArgHandler(m, s, acceptedTypes, returnedTypes, getters);
         }
     }
 
