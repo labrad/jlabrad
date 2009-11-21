@@ -11,6 +11,12 @@
 
 - streamline deployment
 - visual indication when connection to LabRAD is lost
+- renegotiate connection automatically after reconnect
 - update credentials on the fly from the registry
 
+- access node settings remotely (e.g. directories, extensions)
+
+- run multiple server instances on one node (set per-server environment variables, for example)
+
+- log when servers start, stop, or fail
 

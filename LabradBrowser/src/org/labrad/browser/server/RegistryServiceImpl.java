@@ -12,6 +12,7 @@ import org.labrad.data.Data;
 import org.labrad.data.Request;
 import org.labrad.data.Setters;
 
+import com.google.common.collect.Lists;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 
 @SuppressWarnings("serial")
@@ -165,15 +166,22 @@ public class RegistryServiceImpl extends RemoteServiceServlet implements Registr
    * Remove a directory.
    */
   public RegistryListing rmdir(List<String> path, String dir) throws RegistryError {
-    // TODO make this recursive so it empties the directory first
+    // remove all subdirectories
+    List<String> subPath = Lists.newArrayList(path);
+    subPath.add(dir);
+    RegistryListing ls = getListing(subPath);
+    for (String subDir : ls.getDirs()) {
+      rmdir(subPath, subDir);
+    }
+    // remove the directory itself
     Request req = startPacket(path);
     req.add("rmdir", Data.valueOf(dir));
     try {
       LabradConnection.get().sendAndWait(req);
     } catch (InterruptedException e) {
-      throw new RegistryError("Interrupted while creating directory.");
+      throw new RegistryError("Interrupted while removing directory.");
     } catch (ExecutionException e) {
-      throw new RegistryError("Error while making dir: " + e.getCause().getMessage());
+      throw new RegistryError("Error while removing dir: " + e.getCause().getMessage());
     }
     return getListing(path);
   }
