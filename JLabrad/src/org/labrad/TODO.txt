@@ -13,8 +13,8 @@ Server
 - generate code to call settings at runtime (rather than using reflection)
 
 Deployment
-- how to deploy JLabrad to developers
-- how to deploy apps for desktop
+- how to deploy JLabrad to developers (just grab a jar)
+- how to deploy apps for desktop (just double-click a jar)
 - how to deploy apps with jnlp
 - provide ssh tunneling capabilities
 
@@ -26,8 +26,7 @@ Data
 - add get* and set* methods that do not check types for use with vectorization
 
 General
-- flatten data outside the network thread, so that exceptions do not kill the network thread (and for performance)
-- unflatten data in the network thread, because an error here _should_ kill the connection
+- allow to flatten data outside the network thread, so that exceptions do not kill the network thread (and for performance)
 - try to write things as interfaces, rather than concrete types.
 - implement connection object, server, client, etc. as beans (ala delphi API)
 - easier way to get at the results of a packet call, rather than indexing into the result

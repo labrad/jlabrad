@@ -50,6 +50,16 @@ public class LookupProvider {
     this.connection = connection;
   }
 
+  public void clearCache() {
+    serverCache.clear();
+    settingCache.clear();
+  }
+  
+  public void clearServer(String name) {
+    // TODO connect this to server disconnection messages 
+    Long id = serverCache.remove(name);
+    settingCache.remove(id);
+  }
 
   /**
    * Attempt to do necessary server/setting lookups from the local cache only.
@@ -58,9 +68,9 @@ public class LookupProvider {
   public void doLookupsFromCache(Request request) {
     // lookup server ID
     if (request.needsServerLookup()) {
-      Long serverID = serverCache.get(request.getServerName());
-      if (serverID != null) {
-        request.setServerID(serverID);
+      Long serverId = serverCache.get(request.getServerName());
+      if (serverId != null) {
+        request.setServerID(serverId);
       }
     }
     // lookup setting IDs if server ID lookup succeeded
@@ -69,9 +79,9 @@ public class LookupProvider {
       if (cache != null) {
         for (Record r : request.getRecords()) {
           if (r.needsLookup()) {
-            Long settingID = cache.get(r.getName());
-            if (settingID != null) {
-              r.setID(settingID);
+            Long settingId = cache.get(r.getName());
+            if (settingId != null) {
+              r.setID(settingId);
             }
           }
         }
