@@ -371,6 +371,5 @@ implements OpenHandler<TreeItem>, SelectionHandler<TreeItem>, CloseHandler<TreeI
   }
 
   public void onSelection(SelectionEvent<TreeItem> event) {
-    // TODO Auto-generated method stub
   }
 }
