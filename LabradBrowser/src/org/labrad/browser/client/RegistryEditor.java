@@ -23,6 +23,7 @@ import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.HorizontalPanel;
+import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.Tree;
@@ -168,7 +169,7 @@ implements OpenHandler<TreeItem>, SelectionHandler<TreeItem>, CloseHandler<TreeI
         }
       });
 
-      panel.add(images.folderAdd().createImage());
+      panel.add(new Image(images.folderAdd()));
       panel.add(box);
       initWidget(panel);
     }
@@ -183,7 +184,7 @@ implements OpenHandler<TreeItem>, SelectionHandler<TreeItem>, CloseHandler<TreeI
 
   private TreeItem makeDirItem(List<String> path, String dir) {
     HorizontalPanel p = new HorizontalPanel();
-    p.add(images.folder().createImage());
+    p.add(new Image(images.folder()));
     p.add(new Label(dir));
     TreeItem item = new TreeItem(p);
     item.setUserObject(new ItemInfo(path, dir));
@@ -270,7 +271,7 @@ implements OpenHandler<TreeItem>, SelectionHandler<TreeItem>, CloseHandler<TreeI
         }
       });
 
-      panel.add(images.folderAdd().createImage());
+      panel.add(new Image(images.folderAdd()));
       panel.add(keyBox);
       panel.add(valueBox);
       initWidget(panel);
@@ -285,7 +286,7 @@ implements OpenHandler<TreeItem>, SelectionHandler<TreeItem>, CloseHandler<TreeI
 
   private TreeItem makeKeyItem(final List<String> path, final String key, final String val) {
     HorizontalPanel p = new HorizontalPanel();
-    p.add(images.key().createImage());
+    p.add(new Image(images.key()));
     p.add(new Label(key + " = "));
     final TextBox t = new TextBox();
     t.setText(val);

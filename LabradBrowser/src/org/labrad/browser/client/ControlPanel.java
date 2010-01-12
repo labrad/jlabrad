@@ -13,6 +13,7 @@ import com.google.gwt.user.client.ui.Grid;
 import com.google.gwt.user.client.ui.HasHorizontalAlignment;
 import com.google.gwt.user.client.ui.HasVerticalAlignment;
 import com.google.gwt.user.client.ui.HorizontalPanel;
+import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.PushButton;
 import com.google.gwt.user.client.ui.VerticalPanel;
@@ -348,7 +349,7 @@ public class ControlPanel extends VerticalPanel {
    * @return
    */
   private Widget makeNodeControl(final String nodename) {
-    final PushButton b = new PushButton(images.restartServerIcon().createImage());
+    final PushButton b = new PushButton(new Image(images.restartServerIcon()));
     b.getUpDisabledFace().setImage(new Throbber());
     b.setTitle("Update the list of available servers");
     b.addClickHandler(new ClickHandler() {

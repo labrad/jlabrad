@@ -12,7 +12,7 @@ public class IpEntry extends HorizontalPanel {
   private static final NodeImageBundle images = GWT.create(NodeImageBundle.class);
 
   public IpEntry(final IpListControl parent, final String address, final boolean allowed) {
-    Image img = allowed ? images.ipAllowed().createImage() : images.ipDisallowed().createImage();
+    Image img = allowed ? new Image(images.ipAllowed()) : new Image(images.ipDisallowed());
     PushButton button = new PushButton(img);
     button.addClickHandler(new ClickHandler() {
       public void onClick(ClickEvent e) {

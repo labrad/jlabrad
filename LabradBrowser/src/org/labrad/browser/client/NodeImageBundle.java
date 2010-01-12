@@ -1,92 +1,92 @@
 package org.labrad.browser.client;
 
-import com.google.gwt.user.client.ui.AbstractImagePrototype;
-import com.google.gwt.user.client.ui.ImageBundle;
+import com.google.gwt.resources.client.ClientBundle;
+import com.google.gwt.resources.client.ImageResource;
 
-public interface NodeImageBundle extends ImageBundle {
+public interface NodeImageBundle extends ClientBundle {
   /**
    * Server information.
    */
-  @Resource("org/labrad/browser/images/information.gif")
-  public AbstractImagePrototype serverInfoIcon();
+  @Source("org/labrad/browser/images/information.gif")
+  public ImageResource serverInfoIcon();
 
   /**
    * Server information (disabled).
    */
-  @Resource("org/labrad/browser/images/information_gray.gif")
-  public AbstractImagePrototype serverInfoIconDisabled();
+  @Source("org/labrad/browser/images/information_gray.gif")
+  public ImageResource serverInfoIconDisabled();
 
   /**
    * Start a server.
    */
-  @Resource("org/labrad/browser/images/add.gif")
-  public AbstractImagePrototype startServerIcon();
+  @Source("org/labrad/browser/images/add.gif")
+  public ImageResource startServerIcon();
 
   /**
    * Start a server (button disabled).
    */
-  @Resource("org/labrad/browser/images/add_gray.gif")
-  public AbstractImagePrototype startServerIconDisabled();
+  @Source("org/labrad/browser/images/add_gray.gif")
+  public ImageResource startServerIconDisabled();
 
 
   /**
    * Restart a server.
    */
-  @Resource("org/labrad/browser/images/arrow_refresh.gif")
-  public AbstractImagePrototype restartServerIcon();
+  @Source("org/labrad/browser/images/arrow_refresh.gif")
+  public ImageResource restartServerIcon();
 
   /**
    * Restart a server (button disabled).
    */
-  @Resource("org/labrad/browser/images/arrow_refresh_gray.gif")
-  public AbstractImagePrototype restartServerIconDisabled();
+  @Source("org/labrad/browser/images/arrow_refresh_gray.gif")
+  public ImageResource restartServerIconDisabled();
 
 
   /**
    * Stop a server.
    */
-  @Resource("org/labrad/browser/images/delete.gif")
-  public AbstractImagePrototype stopServerIcon();
+  @Source("org/labrad/browser/images/delete.gif")
+  public ImageResource stopServerIcon();
 
   /**
    * Stop a server (button disabled).
    */
-  @Resource("org/labrad/browser/images/delete_gray.gif")
-  public AbstractImagePrototype stopServerIconDisabled();
+  @Source("org/labrad/browser/images/delete_gray.gif")
+  public ImageResource stopServerIconDisabled();
 
   /**
    * IP address on the white list
    */
-  @Resource("org/labrad/browser/images/tick.gif")
-  public AbstractImagePrototype ipAllowed();
+  @Source("org/labrad/browser/images/tick.gif")
+  public ImageResource ipAllowed();
 
   /**
    * IP address on the black list
    */
-  @Resource("org/labrad/browser/images/cross.gif")
-  public AbstractImagePrototype ipDisallowed();
+  @Source("org/labrad/browser/images/cross.gif")
+  public ImageResource ipDisallowed();
 
   /**
    * Folder in the registry
    */
-  @Resource("org/labrad/browser/images/folder.png")
-  public AbstractImagePrototype folder();
+  @Source("org/labrad/browser/images/folder.png")
+  public ImageResource folder();
 
   /**
    * Folder add
    */
-  @Resource("org/labrad/browser/images/folder_add.png")
-  public AbstractImagePrototype folderAdd();
+  @Source("org/labrad/browser/images/folder_add.png")
+  public ImageResource folderAdd();
 
   /**
    * Key in the registry
    */
-  @Resource("org/labrad/browser/images/key.png")
-  public AbstractImagePrototype key();
+  @Source("org/labrad/browser/images/key.png")
+  public ImageResource key();
 
   /**
    * Key add
    */
-  @Resource("org/labrad/browser/images/key_add.png")
-  public AbstractImagePrototype keyAdd();
+  @Source("org/labrad/browser/images/key_add.png")
+  public ImageResource keyAdd();
 }

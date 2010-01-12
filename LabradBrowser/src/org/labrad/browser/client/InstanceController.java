@@ -14,6 +14,7 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.DeckPanel;
 import com.google.gwt.user.client.ui.HasHorizontalAlignment;
 import com.google.gwt.user.client.ui.HorizontalPanel;
+import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.PushButton;
 import com.google.gwt.user.client.ui.VerticalPanel;
@@ -83,23 +84,23 @@ implements ClickHandler, AsyncCallback<String> {
     statusLabel.addStyleDependentName("status");
 
     // build info button
-    info = new PushButton(images.serverInfoIcon().createImage());
-    info.getUpDisabledFace().setImage(images.serverInfoIconDisabled().createImage());
+    info = new PushButton(new Image(images.serverInfoIcon()));
+    info.getUpDisabledFace().setImage(new Image(images.serverInfoIconDisabled()));
     info.addClickHandler(this);
     info.setEnabled(version != null);
     info.setTitle(version);
 
     // build control button
-    start = new PushButton(images.startServerIcon().createImage());
-    start.getUpDisabledFace().setImage(images.startServerIconDisabled().createImage());
+    start = new PushButton(new Image(images.startServerIcon()));
+    start.getUpDisabledFace().setImage(new Image(images.startServerIconDisabled()));
     start.addClickHandler(this);
 
-    stop = new PushButton(images.stopServerIcon().createImage());
-    stop.getUpDisabledFace().setImage(images.stopServerIconDisabled().createImage());
+    stop = new PushButton(new Image(images.stopServerIcon()));
+    stop.getUpDisabledFace().setImage(new Image(images.stopServerIconDisabled()));
     stop.addClickHandler(this);
 
-    restart = new PushButton(images.restartServerIcon().createImage());
-    restart.getUpDisabledFace().setImage(images.restartServerIconDisabled().createImage());
+    restart = new PushButton(new Image(images.restartServerIcon()));
+    restart.getUpDisabledFace().setImage(new Image(images.restartServerIconDisabled()));
     restart.addClickHandler(this);
 
     // put control buttons in a panel
