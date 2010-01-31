@@ -4,13 +4,13 @@ Server
 - setting definitions
   - unpack arbitrarily complicated LabRAD types into structural Java types
   - make the constructed accepted type tags more pretty
+  - also do introspection on return types and provide methods to convert from java back to LabRAD
 - when an error happens inside a setting, include info in the returned message (which setting, etc.)
 - message handlers (per context or global)
   - allow message handlers to be created declaratively, using annotations to set dispatch policy, etc.
 - create server bean
 - have connection bean fire RequestEvent
 - handle context expiration messages
-- generate code to call settings at runtime (rather than using reflection)
 
 Deployment
 - how to deploy JLabrad to developers (just grab a jar)
@@ -23,7 +23,10 @@ Client
   - clear the cache automatically when a server disconnects
 
 Data
-- add get* and set* methods that do not check types for use with vectorization
+- add get* and set* methods that do not check types for use with vectorization (these should be private)
+- allow for getting and setting multidimensional array data in a more convenient way
+- allow to get a subarray of a multidimensional array as a data object in its own right
+  - just like a normal data object except for setting array size.  Maybe just disallow this?
 
 General
 - allow to flatten data outside the network thread, so that exceptions do not kill the network thread (and for performance)
