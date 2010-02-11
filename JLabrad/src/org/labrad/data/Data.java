@@ -287,6 +287,167 @@ public class Data implements Serializable, Cloneable {
     }
    */
 
+  //static constructors for 2D arrays of basic types
+  // TODO ensure that 2D and 3D arrays are rectangular
+  public static Data valueOf(boolean[][] a) {
+    Data data = Data.ofType("*2b");
+    data.setArrayShape(a.length, a.length > 0 ? a[0].length : 0);
+    for (int i = 0; i < a.length; i++) {
+      for (int j = 0; j < a[0].length; j++) {
+        data.setBool(a[i][j], i, j);
+      }
+    }
+    return data;
+  }
+
+  public static Data valueOf(int[][] a) {
+    Data data = Data.ofType("*2i");
+    data.setArrayShape(a.length, a.length > 0 ? a[0].length : 0);
+    for (int i = 0; i < a.length; i++) {
+      for (int j = 0; j < a[0].length; j++) {
+        data.setInt(a[i][j], i, j);
+      }
+    }
+    return data;
+  }
+
+  public static Data valueOf(long[][] a) {
+    Data data = Data.ofType("*2w");
+    data.setArrayShape(a.length, a.length > 0 ? a[0].length : 0);
+    for (int i = 0; i < a.length; i++) {
+      for (int j = 0; j < a[0].length; j++) {
+        data.setWord(a[i][j], i, j);
+      }
+    }
+    return data;
+  }
+
+  public static Data valueOf(double[][] a) {
+    Data data = Data.ofType("*2v");
+    data.setArrayShape(a.length, a.length > 0 ? a[0].length : 0);
+    for (int i = 0; i < a.length; i++) {
+      for (int j = 0; j < a[0].length; j++) {
+        data.setValue(a[i][j], i, j);
+      }
+    }
+    return data;
+  }
+
+  public static Data valueOf(double[][] a, String units) {
+    Data data = Data.ofType("*2v[" + units + "]");
+    data.setArrayShape(a.length, a.length > 0 ? a[0].length : 0);
+    for (int i = 0; i < a.length; i++) {
+      for (int j = 0; j < a[0].length; j++) {
+        data.setValue(a[i][j], i, j);
+      }
+    }
+    return data;
+  }
+
+  public static Data valueOf(String[][] a) {
+    Data data = Data.ofType("*2s");
+    data.setArrayShape(a.length, a.length > 0 ? a[0].length : 0);
+    for (int i = 0; i < a.length; i++) {
+      for (int j = 0; j < a[0].length; j++) {
+        data.setString(a[i][j], i, j);
+      }
+    }
+    return data;
+  }
+  
+  
+  //static constructors for 3D arrays of basic types
+  public static Data valueOf(boolean[][][] a) {
+    Data data = Data.ofType("*3b");
+    data.setArrayShape(a.length,
+                       a.length > 0 ? a[0].length : 0,
+                       a.length > 0 && a[0].length > 0 ? a[0][0].length : 0);
+    for (int i = 0; i < a.length; i++) {
+      for (int j = 0; j < a[0].length; j++) {
+        for (int k = 0; k < a[0][0].length; k++) {
+          data.setBool(a[i][j][k], i, j, k);
+        }
+      }
+    }
+    return data;
+  }
+
+  public static Data valueOf(int[][][] a) {
+    Data data = Data.ofType("*3i");
+    data.setArrayShape(a.length,
+        a.length > 0 ? a[0].length : 0,
+        a.length > 0 && a[0].length > 0 ? a[0][0].length : 0);
+    for (int i = 0; i < a.length; i++) {
+      for (int j = 0; j < a[0].length; j++) {
+        for (int k = 0; k < a[0][0].length; k++) {
+          data.setInt(a[i][j][k], i, j, k);
+        }
+      }
+    }
+    return data;
+  }
+
+  public static Data valueOf(long[][][] a) {
+    Data data = Data.ofType("*3w");
+    data.setArrayShape(a.length,
+        a.length > 0 ? a[0].length : 0,
+        a.length > 0 && a[0].length > 0 ? a[0][0].length : 0);
+    for (int i = 0; i < a.length; i++) {
+      for (int j = 0; j < a[0].length; j++) {
+        for (int k = 0; k < a[0][0].length; k++) {
+          data.setWord(a[i][j][k], i, j, k);
+        }
+      }
+    }
+    return data;
+  }
+
+  public static Data valueOf(double[][][] a) {
+    Data data = Data.ofType("*3v");
+    data.setArrayShape(a.length,
+        a.length > 0 ? a[0].length : 0,
+        a.length > 0 && a[0].length > 0 ? a[0][0].length : 0);
+    for (int i = 0; i < a.length; i++) {
+      for (int j = 0; j < a[0].length; j++) {
+        for (int k = 0; k < a[0][0].length; k++) {
+          data.setValue(a[i][j][k], i, j, k);
+        }
+      }
+    }
+    return data;
+  }
+
+  public static Data valueOf(double[][][] a, String units) {
+    Data data = Data.ofType("*3v[" + units + "]");
+    data.setArrayShape(a.length,
+        a.length > 0 ? a[0].length : 0,
+        a.length > 0 && a[0].length > 0 ? a[0][0].length : 0);
+    for (int i = 0; i < a.length; i++) {
+      for (int j = 0; j < a[0].length; j++) {
+        for (int k = 0; k < a[0][0].length; k++) {
+          data.setValue(a[i][j][k], i, j, k);
+        }
+      }
+    }
+    return data;
+  }
+
+  public static Data valueOf(String[][][] a) {
+    Data data = Data.ofType("*3s");
+    data.setArrayShape(a.length,
+        a.length > 0 ? a[0].length : 0,
+        a.length > 0 && a[0].length > 0 ? a[0][0].length : 0);
+    for (int i = 0; i < a.length; i++) {
+      for (int j = 0; j < a[0].length; j++) {
+        for (int k = 0; k < a[0][0].length; k++) {
+          data.setString(a[i][j][k], i, j, k);
+        }
+      }
+    }
+    return data;
+  }
+  
+  
   // static constructors for specific types
   public static Data ofType(String tag) {
     return new Data(tag);
