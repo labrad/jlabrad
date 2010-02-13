@@ -382,7 +382,6 @@ public class ServerConnection implements Connection {
       try {
         md = MessageDigest.getInstance("MD5");
       } catch (NoSuchAlgorithmException e) {
-        // TODO provide fallback MD5 hash implementation
         throw new RuntimeException("MD5 hash not supported.");
       }
       byte[] challenge = response.getBytes();
@@ -896,14 +895,12 @@ public class ServerConnection implements Connection {
         if (e.getMessageID() != ID) return;
         try {
           m.invoke(server, e);
+          // TODO handle exceptions in a meaningful way
         } catch (IllegalArgumentException e1) {
-          // TODO Auto-generated catch block
           e1.printStackTrace();
         } catch (IllegalAccessException e1) {
-          // TODO Auto-generated catch block
           e1.printStackTrace();
         } catch (InvocationTargetException e1) {
-          // TODO Auto-generated catch block
           e1.printStackTrace();
         }
       }

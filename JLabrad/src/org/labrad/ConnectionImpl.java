@@ -281,7 +281,6 @@ public class ConnectionImpl implements Connection {
       try {
         md = MessageDigest.getInstance("MD5");
       } catch (NoSuchAlgorithmException e) {
-        // TODO provide fallback MD5 hash implementation
         throw new RuntimeException("MD5 hash not supported.");
       }
       byte[] challenge = response.getBytes();

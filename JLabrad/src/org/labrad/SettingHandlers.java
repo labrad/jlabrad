@@ -402,5 +402,5 @@ public class SettingHandlers {
   }
 
   // TODO add Flattenable interface for automatic conversion to/from LabRAD types (ala Serializable)
-  // TODO allow Lists and Arrays of Flattenable types?
+  // TODO allow Lists and Arrays of Flattenable types
 }

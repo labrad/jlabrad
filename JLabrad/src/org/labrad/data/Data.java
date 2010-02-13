@@ -103,7 +103,7 @@ public class Data implements Serializable, Cloneable {
 
       case ERROR:
         dest.setError(src.getErrorCode(), src.getErrorMessage());
-        // TODO add error payloads.
+        // TODO add error payloads
         //clone.setPayload(src.getErrorPayload());
 
       default:
