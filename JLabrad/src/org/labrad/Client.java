@@ -268,7 +268,7 @@ public class Client implements Connection, Serializable {
   private RequestDispatcher requestDispatcher;
 
   /** Thread pool for handling lookups. */
-  private ExecutorService executor = Executors.newCachedThreadPool();
+  transient private ExecutorService executor = Executors.newCachedThreadPool();
 
   /** Performs server and method lookups. */
   private LookupProvider lookupProvider = new LookupProvider(this);

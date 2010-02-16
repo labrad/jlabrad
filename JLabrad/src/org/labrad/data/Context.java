@@ -19,7 +19,11 @@
 
 package org.labrad.data;
 
-public class Context {
+import java.io.Serializable;
+
+public class Context implements Serializable {
+  private static final long serialVersionUID = 1L;
+  
   private final long high, low;
 
   public Context(long high, long low) {

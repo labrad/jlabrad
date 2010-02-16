@@ -853,9 +853,10 @@ public class ServerConnection implements Connection {
     }
 
     // build handlers for sets of overloaded methods and add them to the dispatch table
-    for (String name : methodMap.keySet()) {
+    for (Map.Entry<String, Method> entry : methodMap.entrySet()) {
       // create a list of all the overloaded methods
-      Method m = methodMap.get(name);
+      String name = entry.getKey();
+      Method m = entry.getValue();
       List<Method> overloads = Lists.newArrayList(m);
       overloads.addAll(overloadMap.get(name));
       Setting s = m.getAnnotation(Setting.class);

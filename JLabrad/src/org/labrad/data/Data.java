@@ -767,10 +767,12 @@ public class Data implements Serializable, Cloneable {
         return prettyList(shape, indices, 0);
 
       case CLUSTER:
+        StringBuffer buf = new StringBuffer(s);
         for (int i = 0; i < getClusterSize(); i++) {
-          s += ", " + get(i).pretty();
+          buf.append(", ");
+          buf.append(get(i).pretty());
         }
-        return "(" + s.substring(2) + ")";
+        return "(" + buf.toString().substring(2) + ")";
 
       case ERROR:
         return "Error(" + Integer.toString(getErrorCode()) + ", "

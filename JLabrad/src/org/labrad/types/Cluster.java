@@ -77,11 +77,12 @@ public final class Cluster extends Type {
   public String toString() { return string; }
 
   public String pretty() {
-    String s = "";
+    StringBuffer buf = new StringBuffer();
     for (Type t : elementTypes) {
-      s += ", " + t.pretty();
+      buf.append(", ");
+      buf.append(t.pretty());
     }
-    return "cluster(" + s.substring(2) + ")";
+    return "cluster(" + buf.toString().substring(2) + ")";
   }
 
   public boolean matches(Type type) {

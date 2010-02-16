@@ -236,7 +236,7 @@ public abstract class Type {
    */
   private static String parseUnits(Buffer tb) {
     tb.skipWhitespace();
-    String units = "";
+    StringBuffer units = new StringBuffer();
     char c;
     if ((tb.length() == 0) || (tb.peekChar() != '[')) {
       return null;
@@ -245,9 +245,9 @@ public abstract class Type {
     while (tb.length() > 0) {
       c = tb.getChar();
       if (c == ']') {
-        return units;
+        return units.toString();
       }
-      units += c;
+      units.append(c);
     }
     throw new RuntimeException("No closing ] found.");
   }
