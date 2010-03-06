@@ -36,8 +36,6 @@ import org.labrad.types.Cluster;
 import org.labrad.types.Empty;
 import org.labrad.types.Type;
 
-import com.google.common.collect.Lists;
-
 /**
  * The Data class encapsulates the data format used to communicate between
  * LabRAD servers and clients.  This data format is based on the
@@ -276,16 +274,19 @@ public class Data implements Serializable, Cloneable {
     }
     return data;
   }
+  
   /*
-    public static Data valueOf(Date[] t) { return new Data("t").setTime(t); }
+  public static Data valueOf(Date[] t) {
+    return new Data("t").setTime(t);
+  }
 
-    public static Data valueOf(double[] re, double[] im) {
-    	return new Data("c").setComplex(re, im);
-    }
-    public static Data valueOf(double[] re, double[] im, String units) {
-    	return new Data("c[" + units + "]").setComplex(re, im);
-    }
-   */
+  public static Data valueOf(double[] re, double[] im) {
+  	return new Data("c").setComplex(re, im);
+  }
+  public static Data valueOf(double[] re, double[] im, String units) {
+  	return new Data("c[" + units + "]").setComplex(re, im);
+  }
+  */
 
   //static constructors for 2D arrays of basic types
   // TODO ensure that 2D and 3D arrays are rectangular
@@ -529,7 +530,7 @@ public class Data implements Serializable, Cloneable {
     if (type.isFixedWidth()) {
       heap = Collections.emptyList();
     } else {
-      heap = Lists.newArrayList();
+      heap = new ArrayList<byte[]>();
     }
     return heap;
   }
