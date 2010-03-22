@@ -23,6 +23,7 @@ public class LabradGrapher implements EntryPoint, ValueChangeHandler<String> {
   
   private List<String> path = new ArrayList<String>();
   
+  private final BreadcrumbView breadcrumbs = new BreadcrumbView();
   private final HorizontalPanel container = new HorizontalPanel();
   
   /**
@@ -31,12 +32,11 @@ public class LabradGrapher implements EntryPoint, ValueChangeHandler<String> {
   public void onModuleLoad() {
 
     VerticalPanel page = new VerticalPanel();
-    page.add(new BreadcrumbView());
+    page.add(breadcrumbs);
     page.add(container);
     
     RootPanel.get().add(page);
     
-    //updateListing();
     History.addValueChangeHandler(this);
     String token = History.getToken();
     if (token == null || token.isEmpty()) {
@@ -52,10 +52,13 @@ public class LabradGrapher implements EntryPoint, ValueChangeHandler<String> {
     String token = event.getValue();
     List<String> newPath = TokenParser.tokenToPath(token);
     if (!token.endsWith("/")) {
-      int newName = Integer.parseInt(newPath.remove(newPath.size() - 1));
+      String newName = newPath.remove(newPath.size() - 1);
+      int newNum = Integer.parseInt(newName);
+      breadcrumbs.setDatasetPath(newPath, newName);
       container.clear();
-      container.add(new DatasetView(newPath, newName, datavaultService));
+      container.add(new DatasetView(newPath, newNum, datavaultService));
     } else {
+      breadcrumbs.setPath(newPath);
       container.clear();
       container.add(new DirectoryView(newPath, datavaultService));
     }

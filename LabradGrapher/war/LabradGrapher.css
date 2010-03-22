@@ -1,5 +1,8 @@
 /** Add css rules here for your application. */
 
+a {
+	text-decoration: none;
+}
 
 /** Example rules used by the template application (remove for your app) */
 h1 {
@@ -32,3 +35,9 @@ h1 {
 #closeButton {
   margin: 15px 6px 6px;
 }
+
+.gwt-Label-separator {
+	margin-left: 6px;
+	margin-right: 6px;
+}
+

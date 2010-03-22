@@ -5,9 +5,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.DialogBox;
+import com.google.gwt.user.client.ui.DisclosurePanel;
 import com.google.gwt.user.client.ui.Grid;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.VerticalPanel;
@@ -48,10 +52,10 @@ public class DatasetView extends Composite {
   public void handleDatasetInfo(DatasetInfo info) {
     this.info = info;
     
-    panel.clear();
-    panel.add(new Label(info.getName().toString()));
-    panel.add(new Label(info.getIndependents().toString()));
-    panel.add(new Label(info.getDependents().toString()));
+    DisclosurePanel paramPanel = new DisclosurePanel(info.getName());
+    VerticalPanel contents = new VerticalPanel();
+    contents.add(new Label(info.getIndependents().toString()));
+    contents.add(new Label(info.getDependents().toString()));
     
     Map<String, String> params = info.getParameters();
     Grid t = new Grid(params.size(), 2);
@@ -67,14 +71,26 @@ public class DatasetView extends Composite {
       t.setText(i, 1, params.get(key));
       i++;
     }
-    panel.add(t);
+    contents.add(t);
+    
+    paramPanel.add(contents);
+    panel.clear();
+    panel.add(paramPanel);
     
     service.getData(path, info.getNum(), new AsyncCallback<double[][]>() {
 
       @Override
       public void onFailure(Throwable caught) {
-        DialogBox msg = new DialogBox();
+        final DialogBox msg = new DialogBox();
+        msg.setModal(true);
         msg.setText("Error occurred while grabbing data:\n\n" + caught.getMessage());
+        Button ok = new Button("OK");
+        ok.addClickHandler(new ClickHandler() {
+          public void onClick(ClickEvent event) {
+            msg.hide();
+          }
+        });
+        msg.setWidget(ok);
         msg.show();
       }
 
@@ -89,16 +105,99 @@ public class DatasetView extends Composite {
   public void handleData(double[][] data) {
     GWTCanvas canvas = new GWTCanvas(800, 600);
     
-    canvas.setLineWidth(1);
-    canvas.setStrokeStyle(Color.RED);
-    
-    canvas.beginPath();
-    canvas.moveTo(10, 10);
-    canvas.lineTo(100, 10);
-    canvas.lineTo(100, 100);
-    canvas.lineTo(10, 100);
-    canvas.closePath();
-    canvas.stroke();
+    if (info.getIndependents().size() == 1) {
+      // draw 1D data
+      drawData1D(canvas, data);
+    } else if (info.getIndependents().size() == 2) {
+      // draw 2D data
+      drawData2D(canvas, data);
+    }
     panel.add(canvas);
+  }
+  
+  private void drawData1D(GWTCanvas canvas, double[][] data) {
+    int n = data.length;
+    int nDeps = info.getDependents().size();
+    double[] xs = new double[n];
+    double[][] yss = new double[nDeps][n];
+    double xMin = Double.MAX_VALUE;
+    double xMax = Double.MIN_VALUE;
+    double yMin = Double.MAX_VALUE;
+    double yMax = Double.MIN_VALUE;
+    
+    if (n == 0) {
+      xMin = 0;
+      xMax = 1;
+      yMin = 0;
+      yMax = 1; 
+    } else {
+      for (int i = 0; i < n; i++) {
+        double x = data[i][0];
+        xs[i] = x;
+        xMin = Math.min(x, xMin);
+        xMax = Math.max(x, xMax);
+        for (int j = 0; j < nDeps; j++) {
+          double y = data[i][j+1];
+          yss[j][i] = y;
+          yMin = Math.min(y, yMin);
+          yMax = Math.max(y, yMax);
+        }
+      }
+    }
+    if (n == 1) {
+      xMin -= 0.5;
+      xMax += 0.5;
+      yMin -= 0.5;
+      yMax += 0.5;
+    }
+    
+    for (int j = 0; j < nDeps; j++) {
+      double[] ys = yss[j];
+      Color c = getColor(j);
+      canvas.setStrokeStyle(c);
+      canvas.setFillStyle(c);
+
+      canvas.setLineWidth(1);      
+      canvas.beginPath();
+      for (int i = 0; i < n; i++) {        
+        double x = (xs[i] - xMin) / (xMax - xMin) * canvas.getCoordWidth();
+        double y = (yMax - ys[i]) / (yMax - yMin) * canvas.getCoordHeight();
+
+        if (i == 0) {
+          canvas.moveTo(x, y);
+        } else {
+          canvas.lineTo(x, y);
+        }
+      }
+      canvas.stroke();
+
+      for (int i = 0; i < n; i++) {        
+        double x = (xs[i] - xMin) / (xMax - xMin) * canvas.getCoordWidth();
+        double y = (yMax - ys[i]) / (yMax - yMin) * canvas.getCoordHeight();
+
+        canvas.beginPath();
+        canvas.arc(x, y, 3, 0, 2*Math.PI, false);
+        canvas.fill();
+      }
+
+    }
+  }
+  
+  private void drawData2D(GWTCanvas canvas, double[][] data) {
+    
+  }
+  
+  private Color getColor(int i) {
+    switch (i % 8) {
+    case 0: return Color.RED;
+    case 1: return Color.GREEN;
+    case 2: return Color.BLUE;
+    case 3: return Color.CYAN;
+    case 4: return Color.BLUEVIOLET;
+    case 5: return Color.ORANGE;
+    case 6: return Color.GREY;
+    case 7: return Color.BLACK;
+    }
+    return Color.GREY;
   }
 }
