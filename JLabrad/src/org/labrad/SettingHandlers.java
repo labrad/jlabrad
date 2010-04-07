@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.labrad.annotations.Accepts;
+import org.labrad.annotations.Returns;
 import org.labrad.annotations.Setting;
 import org.labrad.data.Data;
 import org.labrad.data.Getter;
@@ -40,6 +41,7 @@ import org.labrad.handlers.ZeroArgHandler;
 import org.labrad.handlers.ZeroArgVoidHandler;
 import org.labrad.types.Empty;
 import org.labrad.types.Type;
+import org.labrad.types.TypeDescriptor;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -51,13 +53,13 @@ public class SettingHandlers {
    *
    */
   private static class TypedHandler {
-    private final List<Type> t;
+    private final List<TypeDescriptor> t;
     private final SettingHandler h;
-    public TypedHandler(List<Type> t, SettingHandler h) {
+    public TypedHandler(List<TypeDescriptor> t, SettingHandler h) {
       this.t = t;
       this.h = h;
     }
-    public List<Type> getTypes() { return t; }
+    public List<TypeDescriptor> getTypes() { return t; }
     public SettingHandler getHandler() { return h; }
   }
 
@@ -73,8 +75,8 @@ public class SettingHandlers {
 
     // for registration with labrad, we need to keep track of the full list
     // of accepted and returned types across all overloads of this method
-    List<Type> accepts = Lists.newArrayList(); // list of all accepted types
-    List<Type> returns = Lists.newArrayList(); // list of all returned types
+    List<TypeDescriptor> accepts = Lists.newArrayList(); // list of all accepted types
+    List<TypeDescriptor> returns = Lists.newArrayList(); // list of all returned types
     
     // the overloaded handler has a map from types to single method handlers
     List<TypedHandler> handlers = Lists.newArrayList();
@@ -82,15 +84,17 @@ public class SettingHandlers {
     for (Method m : overloads) {
       // get accepted types for this overload
       TypedHandler th = getHandler(m, s);
-      for (Type type : th.getTypes()) {
+      for (TypeDescriptor typeTD : th.getTypes()) {
         // check each type for conflicts with types from other overloads
-        for (Type other : accepts) {
+        Type type = typeTD.getType();
+        for (TypeDescriptor otherTD : accepts) {
+          Type other = otherTD.getType();
           if (type.matches(other) || other.matches(type)) {
             Failure.fail("Type conflict in overloads for method '%s'", m.getName());
           }
         }
         // add this type to the main list
-        accepts.add(type);
+        accepts.add(typeTD);
       }
       // add this handler to the handler map
       handlers.add(th);
@@ -99,16 +103,18 @@ public class SettingHandlers {
       // get returned types for this overload
       // we check them for overlap with the previously-specified
       // return types, and only add them if they are new
-      for (Type t : getReturnedTypes(m)) {
+      for (TypeDescriptor td : getReturnedTypes(m)) {
+        Type t = td.getType();
         // check whether a matching type has already been added to the 
         boolean match = false;
-        for (Type other : accepts) {
+        for (TypeDescriptor otherTD : accepts) {
+          Type other = otherTD.getType();
           if (t.matches(other) || other.matches(t)) {
             match = true;
             break;
           }
         }
-        if (!match) { returns.add(t); }
+        if (!match) { returns.add(td); }
       }
     }
 
@@ -121,16 +127,16 @@ public class SettingHandlers {
       // make a map from all types to the appropriate handlers
       Map<Type, SettingHandler> typeMap = Maps.newHashMap();
       for (TypedHandler th : handlers) {
-        for (Type t : th.getTypes()) {
-          typeMap.put(t, th.getHandler());
+        for (TypeDescriptor td : th.getTypes()) {
+          typeMap.put(td.getType(), th.getHandler());
         }
       }
       // build an OverloadedSettingHandler
       List<String> acceptedTypes = Lists.newArrayList();
-      for (Type t : accepts) { acceptedTypes.add(t.toString()); }
+      for (TypeDescriptor td : accepts) { acceptedTypes.add(td.getTag()); }
 
       List<String> returnedTypes = Lists.newArrayList();
-      for (Type t : returns) { returnedTypes.add(t.toString()); }
+      for (TypeDescriptor td : returns) { returnedTypes.add(td.getTag()); }
 
       return new OverloadedSettingHandler(s, acceptedTypes, returnedTypes, typeMap);
     }
@@ -171,7 +177,7 @@ public class SettingHandlers {
     // build a list of accepted types
     java.lang.reflect.Type[] paramTypes = m.getGenericParameterTypes();
     Annotation[][] paramAnnotations = m.getParameterAnnotations();
-    List<List<Type>> paramAcceptedTypes = Lists.newArrayList();
+    List<List<TypeDescriptor>> paramAcceptedTypes = Lists.newArrayList();
 
     for (int i = 0; i < paramTypes.length; i++) {
       java.lang.reflect.Type cls = paramTypes[i];
@@ -276,25 +282,26 @@ public class SettingHandlers {
       }
       getters.add(getter);
 
-      List<Type> acceptedTags = Lists.newArrayList();
+      List<TypeDescriptor> acceptedTags = Lists.newArrayList();
       // if there is an @Accepts annotation present on this parameter,
       // check the compatibility of the accepted types with the inferred type
       for (Annotation a : paramAnnotations[i]) {
         if (Accepts.class.isInstance(a)) {
           Accepts types = (Accepts)a;
           for (String tag : types.value()) {
-            Type aType = Type.fromTag(tag);
+            TypeDescriptor td = new TypeDescriptor(tag);
+            Type aType = td.getType();
             if (!aType.matches(inferredType)) {
               Failure.fail("Accepted type '%s' does not match inferred type '%s'",
                   tag, inferredType);
             }
-            acceptedTags.add(aType);
+            acceptedTags.add(td);
           }
         }
       }
       // if there was no @Accepts annotation, then just use the inferred type
       if (acceptedTags.size() == 0) {
-        acceptedTags.add(inferredType);
+        acceptedTags.add(new TypeDescriptor(inferredType));
       }
       paramAcceptedTypes.add(acceptedTags);
     }
@@ -302,7 +309,7 @@ public class SettingHandlers {
 
     // create a handler of the appropriate type for this setting
     SettingHandler handler;
-    List<Type> accepts;
+    List<TypeDescriptor> accepts;
 
     int numArgs = m.getParameterTypes().length;
     boolean isVoid = (m.getReturnType() == Void.TYPE);
@@ -310,7 +317,7 @@ public class SettingHandlers {
     switch (numArgs) {
       case 0:
         accepts = Lists.newArrayList();
-        accepts.add(Empty.getInstance());
+        accepts.add(new TypeDescriptor(Empty.getInstance()));
         if (isVoid) {
           handler = new ZeroArgVoidHandler(m, s);
         } else {
@@ -320,8 +327,8 @@ public class SettingHandlers {
 
       case 1:
         accepts = paramAcceptedTypes.get(0);
-        for (Type t : accepts) {
-          acceptedTypes.add(t.toString());
+        for (TypeDescriptor td : accepts) {
+          acceptedTypes.add(td.getTag());
         }
         if (isVoid) {
           handler = new SingleArgVoidHandler(m, s, acceptedTypes, getters.get(0));
@@ -332,8 +339,8 @@ public class SettingHandlers {
 
       default:
         accepts = getAcceptedTypeCombinations(paramAcceptedTypes);
-        for (Type t : accepts) {
-          acceptedTypes.add(t.toString());
+        for (TypeDescriptor td : accepts) {
+          acceptedTypes.add(td.getTag());
         }
         if (isVoid) {
           handler = new MultiArgVoidHandler(m, s, acceptedTypes, getters);
@@ -351,11 +358,23 @@ public class SettingHandlers {
    * @param acceptedLists
    * @return
    */
-  private static List<Type> getAcceptedTypeCombinations(List<List<Type>> acceptedLists) {
-    List<List<Type>> typeLists = combinations(acceptedLists);
-    List<Type> combinedTypes = Lists.newArrayList();
-    for (List<Type> types : typeLists) {
-      combinedTypes.add(org.labrad.types.Cluster.of(types));
+  private static List<TypeDescriptor> getAcceptedTypeCombinations(List<List<TypeDescriptor>> acceptedLists) {
+    List<List<TypeDescriptor>> typeLists = combinations(acceptedLists);
+    List<TypeDescriptor> combinedTypes = Lists.newArrayList();
+    for (List<TypeDescriptor> types : typeLists) {
+      // XXX need an intelligent way to combine tags here
+      StringBuilder tag = new StringBuilder();
+      StringBuilder description = new StringBuilder();
+      for (int i = 0; i < types.size(); i++) {
+        if (i > 0) {
+          tag.append(", ");
+          description.append(", ");
+        }
+        TypeDescriptor td = types.get(i);
+        tag.append(td.getType().toString());
+        description.append(td.getTag());
+      }
+      combinedTypes.add(new TypeDescriptor(tag + ": " + description));
     }
     return combinedTypes;
   }
@@ -390,13 +409,29 @@ public class SettingHandlers {
    * @param m
    * @return
    */
-  private static List<Type> getReturnedTypes(Method m) {
-    // TODO properly check return types and potentially provide setters for them
-    List<Type> ans = Lists.newArrayList();
+  private static List<TypeDescriptor> getReturnedTypes(Method m) {
+    // TODO check Java return types and provide setters for them if possible
+    // TODO if there is an annotation and inferred types, make sure they are compatible
+    List<TypeDescriptor> ans = Lists.newArrayList();
     //Class<?> cls = m.getReturnType();
-    //Annotation[] annotations = m.getAnnotations();
-    if (m.getReturnType() == Void.TYPE) {
-      ans.add(Type.fromTag(""));
+    boolean hasAnnotation = false;
+    for (Annotation annot : m.getAnnotations()) {
+      if (Returns.class.isInstance(annot)) {
+        hasAnnotation = true;
+        Returns types = (Returns)annot;
+        for (String tag : types.value()) {
+          ans.add(new TypeDescriptor(tag));
+        }
+      }
+    }
+    if (!hasAnnotation) {
+      if (m.getReturnType() == Data.class) {
+        ans.add(new TypeDescriptor("?"));
+      }
+      
+      else if (m.getReturnType() == Void.TYPE) {
+        ans.add(new TypeDescriptor(""));
+      }
     }
     return ans;
   }

@@ -17,7 +17,7 @@
  * along with JLabrad.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.labrad;
+package org.labrad.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

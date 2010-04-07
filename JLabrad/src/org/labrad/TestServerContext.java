@@ -141,7 +141,7 @@ public class TestServerContext extends AbstractServerContext {
   @Setting(id = 2,
            name = "Delayed Echo",
            doc = "Echoes back data after a specified delay.")
-  public Data delayedEcho(@Accepts("v[s]") double delay, Data payload) throws InterruptedException {
+  public Data delayedEcho(@Accepts("v[s] {delay}") double delay, @Accepts("? {anything}") Data payload) throws InterruptedException {
     log("Delayed Echo (%g seconds): %s", delay, payload.pretty());
     Thread.sleep((long)(delay*1000));
     return payload;
