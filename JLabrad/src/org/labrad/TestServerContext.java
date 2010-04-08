@@ -141,6 +141,7 @@ public class TestServerContext extends AbstractServerContext {
   @Setting(id = 2,
            name = "Delayed Echo",
            doc = "Echoes back data after a specified delay.")
+  @Returns("? {same as input}")
   public Data delayedEcho(@Accepts("v[s] {delay}") double delay, @Accepts("? {anything}") Data payload) throws InterruptedException {
     log("Delayed Echo (%g seconds): %s", delay, payload.pretty());
     Thread.sleep((long)(delay*1000));
@@ -288,7 +289,7 @@ public class TestServerContext extends AbstractServerContext {
 
   @Setting(id = 11,
            name = "Test No Args",
-           doc = "")
+           doc = "Test setting that takes no arguments.")
   @Returns("b")
   public Data noArgs() {
     log("Test No Args");
@@ -297,14 +298,14 @@ public class TestServerContext extends AbstractServerContext {
 
   @Setting(id = 12,
            name = "Test No Return",
-           doc = "")
+           doc = "Test setting with no return value.")
   public void noReturn(Data data) {
     log("Test No Return", data);
   }
 
   @Setting(id = 13,
            name = "Test No Args No Return",
-           doc = "")
+           doc = "Test setting that takes no arguments and has no return value.")
   public void noArgsNoReturn() {
     log("Test No Args No Return");
   }

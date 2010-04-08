@@ -3,7 +3,6 @@ JLabrad TODOs:
 Server
 - setting definitions
   - unpack arbitrarily complicated LabRAD types into structural Java types
-  - make the constructed accepted type tags more pretty
   - also do introspection on return types and provide methods to convert from java back to LabRAD
 - when an error happens inside a setting, include info in the returned message (which setting, etc.)
 - message handlers (per context or global)

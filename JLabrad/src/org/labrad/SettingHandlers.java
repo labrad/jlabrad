@@ -54,12 +54,15 @@ public class SettingHandlers {
    */
   private static class TypedHandler {
     private final List<TypeDescriptor> t;
+    private final List<TypeDescriptor> r;
     private final SettingHandler h;
-    public TypedHandler(List<TypeDescriptor> t, SettingHandler h) {
+    public TypedHandler(List<TypeDescriptor> t, List<TypeDescriptor> r, SettingHandler h) {
       this.t = t;
+      this.r = r;
       this.h = h;
     }
     public List<TypeDescriptor> getTypes() { return t; }
+    public List<TypeDescriptor> getReturnTypes() { return r; }
     public SettingHandler getHandler() { return h; }
   }
 
@@ -70,7 +73,6 @@ public class SettingHandlers {
    * @return
    */
   public static SettingHandler forMethods(Setting s, List<Method> overloads) {
-    // TODO keep track of accepted types and accepted type tags separately, since type tags may have additional information
     // TODO add returned types to typed handlers since they may need to flatten objects before sending them
 
     // for registration with labrad, we need to keep track of the full list
@@ -84,8 +86,9 @@ public class SettingHandlers {
     for (Method m : overloads) {
       // get accepted types for this overload
       TypedHandler th = getHandler(m, s);
+      
+      // check each type for conflicts with types from other overloads
       for (TypeDescriptor typeTD : th.getTypes()) {
-        // check each type for conflicts with types from other overloads
         Type type = typeTD.getType();
         for (TypeDescriptor otherTD : accepts) {
           Type other = otherTD.getType();
@@ -98,16 +101,15 @@ public class SettingHandlers {
       }
       // add this handler to the handler map
       handlers.add(th);
-
-
+      
       // get returned types for this overload
       // we check them for overlap with the previously-specified
       // return types, and only add them if they are new
-      for (TypeDescriptor td : getReturnedTypes(m)) {
+      for (TypeDescriptor td : th.getReturnTypes()) {
         Type t = td.getType();
         // check whether a matching type has already been added to the 
         boolean match = false;
-        for (TypeDescriptor otherTD : accepts) {
+        for (TypeDescriptor otherTD : returns) {
           Type other = otherTD.getType();
           if (t.matches(other) || other.matches(t)) {
             match = true;
@@ -121,6 +123,7 @@ public class SettingHandlers {
     // build the final handler, by making a composite or extracting out just one handler from the bunch
     if (handlers.size() == 1) {
       // just use the unique handler
+      // need to specify return types here
       return handlers.get(0).getHandler();
 
     } else {
@@ -310,10 +313,15 @@ public class SettingHandlers {
     // create a handler of the appropriate type for this setting
     SettingHandler handler;
     List<TypeDescriptor> accepts;
+    List<TypeDescriptor> returns;
 
     int numArgs = m.getParameterTypes().length;
     boolean isVoid = (m.getReturnType() == Void.TYPE);
-
+    returns = getReturnedTypes(m);
+    for (TypeDescriptor td : returns) {
+      returnedTypes.add(td.getTag());
+    }
+    
     switch (numArgs) {
       case 0:
         accepts = Lists.newArrayList();
@@ -349,7 +357,7 @@ public class SettingHandlers {
         }
     }
 
-    return new TypedHandler(accepts, handler);
+    return new TypedHandler(accepts, returns, handler);
   }
 
   /**
@@ -413,7 +421,6 @@ public class SettingHandlers {
     // TODO check Java return types and provide setters for them if possible
     // TODO if there is an annotation and inferred types, make sure they are compatible
     List<TypeDescriptor> ans = Lists.newArrayList();
-    //Class<?> cls = m.getReturnType();
     boolean hasAnnotation = false;
     for (Annotation annot : m.getAnnotations()) {
       if (Returns.class.isInstance(annot)) {
