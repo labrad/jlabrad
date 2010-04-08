@@ -15,7 +15,6 @@ Deployment
 - how to deploy JLabrad to developers (just grab a jar)
 - how to deploy apps for desktop (just double-click a jar)
 - how to deploy apps with jnlp
-- provide ssh tunneling capabilities
 
 Client
 - provide a means to clear the server/setting cache
@@ -23,7 +22,6 @@ Client
 
 Data
 - add get* and set* methods that do not check types for use with vectorization (these should be private)
-- allow for getting and setting multidimensional array data in a more convenient way
 - allow to get a subarray of a multidimensional array as a data object in its own right
   - just like a normal data object except for setting array size.  Maybe just disallow this?
 

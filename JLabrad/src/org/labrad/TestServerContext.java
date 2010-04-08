@@ -20,7 +20,6 @@
 package org.labrad;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -34,12 +33,15 @@ import org.labrad.data.Hydrant;
 import org.labrad.data.Request;
 import org.labrad.data.Setters;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
 /**
  *
  * @author maffoo
  */
 public class TestServerContext extends AbstractServerContext {
-  private Map<String, Data> registry = new HashMap<String, Data>();
+  private Map<String, Data> registry = Maps.newHashMap();
 
 
   /**
@@ -94,7 +96,7 @@ public class TestServerContext extends AbstractServerContext {
    * @throws ExecutionException
    */
   private Data makeRequest(String server, String setting, Data data)
-  throws InterruptedException, ExecutionException {
+      throws InterruptedException, ExecutionException {
     Request request = Request.to(server, getContext()).add(setting, data);
     List<Data> response = getConnection().sendAndWait(request);
     return response.get(0);
@@ -109,7 +111,7 @@ public class TestServerContext extends AbstractServerContext {
    * @throws ExecutionException
    */
   private Data makeRequest(String server, String setting)
-  throws InterruptedException, ExecutionException {
+      throws InterruptedException, ExecutionException {
     return makeRequest(server, setting, Data.EMPTY);
   }
 
@@ -142,7 +144,8 @@ public class TestServerContext extends AbstractServerContext {
            name = "Delayed Echo",
            doc = "Echoes back data after a specified delay.")
   @Returns("? {same as input}")
-  public Data delayedEcho(@Accepts("v[s] {delay}") double delay, @Accepts("? {anything}") Data payload) throws InterruptedException {
+  public Data delayedEcho(@Accepts("v[s] {delay}") double delay, @Accepts("? {anything}") Data payload)
+      throws InterruptedException {
     log("Delayed Echo (%g seconds): %s", delay, payload.pretty());
     Thread.sleep((long)(delay*1000));
     return payload;
@@ -210,7 +213,7 @@ public class TestServerContext extends AbstractServerContext {
   @Returns("*s")
   public Data getKeys() {
     log("Keys");
-    return Data.listOf(new ArrayList<String>(registry.keySet()), Setters.stringSetter);
+    return Data.listOf(Lists.newArrayList(registry.keySet()), Setters.stringSetter);
   }
 
 
