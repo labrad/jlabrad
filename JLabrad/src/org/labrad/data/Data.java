@@ -1435,7 +1435,9 @@ public class Data implements Serializable, Cloneable {
   // vectorized setters
   public <T> Data setList(List<T> data, Setter<T> setter) {
     getSubtype(Type.Code.LIST); // make sure this is a list
-    getSubtype(setter.getType().getCode(), 0); // make sure the element type is correct
+    if (data.size() > 0) {
+    	getSubtype(setter.getType().getCode(), 0); // make sure the element type is correct
+    }
     setArraySize(data.size());
     int i = 0;
     for (T elem : data) {
