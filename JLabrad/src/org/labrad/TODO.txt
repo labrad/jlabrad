@@ -10,6 +10,7 @@ Server
 - create server bean
 - have connection bean fire RequestEvent
 - handle context expiration messages
+- think about using guice to inject default values of parameters
 
 Deployment
 - how to deploy JLabrad to developers (just grab a jar)
@@ -24,6 +25,7 @@ Data
 - add get* and set* methods that do not check types for use with vectorization (these should be private)
 - allow to get a subarray of a multidimensional array as a data object in its own right
   - just like a normal data object except for setting array size.  Maybe just disallow this?
+- break up into interface and implementation
 
 General
 - allow to flatten data outside the network thread, so that exceptions do not kill the network thread (and for performance)
