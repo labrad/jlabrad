@@ -10,7 +10,7 @@ Server
 - create server bean
 - have connection bean fire RequestEvent
 - handle context expiration messages
-- think about using guice to inject default values of parameters
+- think about using guice to inject default values of parameters, rather than overloading methods
 
 Deployment
 - how to deploy JLabrad to developers (just grab a jar)
