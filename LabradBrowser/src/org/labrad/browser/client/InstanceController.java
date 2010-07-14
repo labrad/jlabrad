@@ -2,6 +2,11 @@ package org.labrad.browser.client;
 
 import java.util.List;
 
+import org.labrad.browser.client.event.NodeRequestFailedException;
+import org.labrad.browser.client.event.NodeServerEvent;
+import org.labrad.browser.client.event.RemoteEventService;
+import org.labrad.browser.client.event.RemoteEventServiceAsync;
+
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
@@ -20,7 +25,7 @@ import com.google.gwt.user.client.ui.PushButton;
 import com.google.gwt.user.client.ui.VerticalPanel;
 
 public class InstanceController extends HorizontalPanel
-implements ClickHandler, AsyncCallback<String> {
+    implements ClickHandler, AsyncCallback<String> {
   /**
    * Service for starting/stopping servers on the node
    */
@@ -55,14 +60,14 @@ implements ClickHandler, AsyncCallback<String> {
 
   private InstanceStatus status;
 
-  //    private void showInfoPopup() {
-    //        PopupPanel pp = new PopupPanel(true);
-  //        RichTextArea rta = new RichTextArea();
-  //        rta.setText(version);
-  //        pp.add(rta);
-  //        pp.setPopupPosition(info.getAbsoluteLeft(), info.getAbsoluteTop());
-  //        pp.show();
-  //    }
+  //private void showInfoPopup() {
+  //  PopupPanel pp = new PopupPanel(true);
+  //  RichTextArea rta = new RichTextArea();
+  //  rta.setText(version);
+  //  pp.add(rta);
+  //  pp.setPopupPosition(info.getAbsoluteLeft(), info.getAbsoluteTop());
+  //  pp.show();
+  //}
 
   public InstanceController(final ControlPanel parent,
       final String node, final String server, String instance, String version,
@@ -143,20 +148,20 @@ implements ClickHandler, AsyncCallback<String> {
   private void registerHandlers() {
     // highlight the row for this server when the user mouses over
     registrations.add(
-        this.addDomHandler(new MouseOverHandler() {
-          public void onMouseOver(MouseOverEvent event) {
-            parent.highlight(server);
-          }
-        }, MouseOverEvent.getType())
+      this.addDomHandler(new MouseOverHandler() {
+        public void onMouseOver(MouseOverEvent event) {
+          parent.highlight(server);
+        }
+      }, MouseOverEvent.getType())
     );
 
     // unhighlight the row for this server when the user mouses out
     registrations.add(
-        this.addDomHandler(new MouseOutHandler() {
-          public void onMouseOut(MouseOutEvent event) {
-            parent.unhighlight(server);
-          }
-        }, MouseOutEvent.getType())
+      this.addDomHandler(new MouseOutHandler() {
+        public void onMouseOut(MouseOutEvent event) {
+          parent.unhighlight(server);
+        }
+      }, MouseOutEvent.getType())
     );
   }
 

@@ -2,6 +2,8 @@ package org.labrad.browser.client;
 
 import java.util.List;
 
+import org.labrad.browser.client.event.NodeStatusEvent;
+
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public interface NodeServiceAsync {

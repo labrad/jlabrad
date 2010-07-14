@@ -9,18 +9,9 @@ import org.labrad.Connection;
 import org.labrad.RequestCallback;
 import org.labrad.browser.ClientEventQueue;
 import org.labrad.browser.LabradConnection;
-import org.labrad.browser.client.LabradConnectEvent;
-import org.labrad.browser.client.LabradDisconnectEvent;
-import org.labrad.browser.client.NodeRequestFailedException;
-import org.labrad.browser.client.NodeServerStartedEvent;
-import org.labrad.browser.client.NodeServerStartingEvent;
-import org.labrad.browser.client.NodeServerStoppedEvent;
-import org.labrad.browser.client.NodeServerStoppingEvent;
-import org.labrad.browser.client.NodeStatusEvent;
-import org.labrad.browser.client.RemoteEventService;
-import org.labrad.browser.client.RemoteEventType;
-import org.labrad.browser.client.ServerConnectEvent;
-import org.labrad.browser.client.ServerDisconnectEvent;
+import org.labrad.browser.client.event.NodeRequestFailedException;
+import org.labrad.browser.client.event.RemoteEvent;
+import org.labrad.browser.client.event.RemoteEventService;
 import org.labrad.data.Context;
 import org.labrad.data.Data;
 import org.labrad.data.Request;
@@ -54,9 +45,9 @@ public class EventServiceImpl extends AsyncRemoteServiceServlet implements Remot
   }
 
   /**
-   * Get a the next event type that have been queued since the last time we checked
+   * Get the event type that has been queued since the last time we checked
    */
-  public RemoteEventType getEvent() {
+  public List<RemoteEvent> getEvents() {
     HttpServletRequest request = getThreadLocalRequest();
     HttpSession session = request.getSession();
     ClientEventQueue client = ClientEventQueue.forSession(session);
@@ -75,37 +66,9 @@ public class EventServiceImpl extends AsyncRemoteServiceServlet implements Remot
       client.setContinuation(null);
 
       // send any events
-      return client.getNextEventType();
+      return client.getEvents();
     }
   }
-
-  /**
-   * Get the event queue for the current request and session
-   * @return
-   */
-  private ClientEventQueue getQueue() {
-    HttpServletRequest request = getThreadLocalRequest();
-    HttpSession session = request.getSession();
-    return ClientEventQueue.forSession(session);
-  }
-
-  public LabradConnectEvent getLabradConnectEvent() {
-    return getQueue().getEvent(LabradConnectEvent.class);
-  }
-
-  public LabradDisconnectEvent getLabradDisconnectEvent() {
-    return getQueue().getEvent(LabradDisconnectEvent.class);
-  }
-
-
-  public ServerConnectEvent getServerConnectEvent() {
-    return getQueue().getEvent(ServerConnectEvent.class);
-  }
-
-  public ServerDisconnectEvent getServerDisconnectEvent() {
-    return getQueue().getEvent(ServerDisconnectEvent.class);
-  }
-
 
   public String startServer(String node, String server) {
     return doRequest(node, server, "start");
@@ -141,28 +104,4 @@ public class EventServiceImpl extends AsyncRemoteServiceServlet implements Remot
     return null;
   }
 
-  public NodeRequestFailedException getNodeRequestFailedEvent() {
-    return getQueue().getEvent(NodeRequestFailedException.class);
-  }	
-
-
-  public NodeServerStartingEvent getNodeServerStartingEvent() {
-    return getQueue().getEvent(NodeServerStartingEvent.class);
-  }
-
-  public NodeServerStartedEvent getNodeServerStartedEvent() {
-    return getQueue().getEvent(NodeServerStartedEvent.class);
-  }
-
-  public NodeServerStoppingEvent getNodeServerStoppingEvent() {
-    return getQueue().getEvent(NodeServerStoppingEvent.class);
-  }
-
-  public NodeServerStoppedEvent getNodeServerStoppedEvent() {
-    return getQueue().getEvent(NodeServerStoppedEvent.class);
-  }
-
-  public NodeStatusEvent getNodeStatusEvent() {
-    return getQueue().getEvent(NodeStatusEvent.class);
-  }
 }

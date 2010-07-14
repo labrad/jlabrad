@@ -4,16 +4,16 @@ import java.util.List;
 import java.util.Map;
 
 import org.labrad.Client;
-import org.labrad.browser.client.LabradConnectEvent;
-import org.labrad.browser.client.LabradDisconnectEvent;
-import org.labrad.browser.client.NodeServerStartedEvent;
-import org.labrad.browser.client.NodeServerStartingEvent;
-import org.labrad.browser.client.NodeServerStatus;
-import org.labrad.browser.client.NodeServerStoppedEvent;
-import org.labrad.browser.client.NodeServerStoppingEvent;
-import org.labrad.browser.client.NodeStatusEvent;
-import org.labrad.browser.client.ServerConnectEvent;
-import org.labrad.browser.client.ServerDisconnectEvent;
+import org.labrad.browser.client.event.LabradConnectEvent;
+import org.labrad.browser.client.event.LabradDisconnectEvent;
+import org.labrad.browser.client.event.NodeServerStartedEvent;
+import org.labrad.browser.client.event.NodeServerStartingEvent;
+import org.labrad.browser.client.event.NodeServerStatus;
+import org.labrad.browser.client.event.NodeServerStoppedEvent;
+import org.labrad.browser.client.event.NodeServerStoppingEvent;
+import org.labrad.browser.client.event.NodeStatusEvent;
+import org.labrad.browser.client.event.ServerConnectEvent;
+import org.labrad.browser.client.event.ServerDisconnectEvent;
 import org.labrad.browser.server.NodeServiceImpl;
 import org.labrad.data.Data;
 import org.labrad.data.Request;
@@ -115,10 +115,10 @@ public class LabradConnection {
    */
   private void addSubscription(Request req, String message, long id) {
     req.add("Subscribe to Named Message",
-        Data.clusterOf(
-            Data.valueOf(message),
-            Data.valueOf(id),
-            Data.valueOf(true)));
+      Data.clusterOf(
+        Data.valueOf(message),
+        Data.valueOf(id),
+        Data.valueOf(true)));
   }
 
   /**

@@ -7,10 +7,10 @@ import java.util.concurrent.Future;
 
 import org.labrad.Connection;
 import org.labrad.browser.LabradConnection;
-import org.labrad.browser.client.NodeRequestFailedException;
-import org.labrad.browser.client.NodeServerStatus;
 import org.labrad.browser.client.NodeService;
-import org.labrad.browser.client.NodeStatusEvent;
+import org.labrad.browser.client.event.NodeRequestFailedException;
+import org.labrad.browser.client.event.NodeServerStatus;
+import org.labrad.browser.client.event.NodeStatusEvent;
 import org.labrad.data.Data;
 import org.labrad.data.Request;
 

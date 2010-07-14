@@ -2,6 +2,9 @@ package org.labrad.browser.client;
 
 import java.util.List;
 
+import org.labrad.browser.client.event.NodeRequestFailedException;
+import org.labrad.browser.client.event.NodeStatusEvent;
+
 import com.google.gwt.user.client.rpc.RemoteService;
 import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
 
