@@ -5,6 +5,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import ca.nanometrics.gflot.client.DataPoint;
+import ca.nanometrics.gflot.client.PlotModel;
+import ca.nanometrics.gflot.client.SeriesHandler;
+import ca.nanometrics.gflot.client.SeriesType;
+import ca.nanometrics.gflot.client.SimplePlot;
+import ca.nanometrics.gflot.client.options.PointsSeriesOptions;
+
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.user.client.rpc.AsyncCallback;
@@ -102,17 +109,36 @@ public class DatasetView extends Composite {
     });
   }
   
+  final boolean USE_GFLOT = true;
+  
   public void handleData(double[][] data) {
-    GWTCanvas canvas = new GWTCanvas(800, 600);
-    
     if (info.getIndependents().size() == 1) {
-      // draw 1D data
-      drawData1D(canvas, data);
+      if (USE_GFLOT) {
+        // create plot with gflot
+        PlotModel model = new PlotModel();
+        for (int i = 0; i < info.getDependents().size(); i++) {
+          SeriesHandler handler = model.addSeries(info.getDependents().get(i));
+          handler.setOptions(SeriesType.POINTS, (new PointsSeriesOptions()).setRadius(4).setFill(true));
+          for (int j = 0; j < data.length; j++) {
+            handler.add(new DataPoint(data[j][0], data[j][i+1]));
+          }
+        }
+        SimplePlot plot = new SimplePlot(model);
+        plot.setWidth(800);
+        plot.setHeight(600);
+        panel.add(plot);
+      } else {
+        // draw 1D data
+        GWTCanvas canvas = new GWTCanvas(800, 600);
+        drawData1D(canvas, data);
+        panel.add(canvas);
+      }
     } else if (info.getIndependents().size() == 2) {
       // draw 2D data
+      GWTCanvas canvas = new GWTCanvas(800, 600);
       drawData2D(canvas, data);
+      panel.add(canvas);
     }
-    panel.add(canvas);
   }
   
   private void drawData1D(GWTCanvas canvas, double[][] data) {

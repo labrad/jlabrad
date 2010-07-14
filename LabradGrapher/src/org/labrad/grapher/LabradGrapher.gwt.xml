@@ -12,6 +12,7 @@
 
   <!-- Other module inherits                                      -->
   <inherits name='com.google.gwt.widgetideas.GWTCanvas'/>
+  <inherits name='ca.nanometrics.gflot.GFlot'/>
 
   <!-- Specify the app entry point class.                         -->
   <entry-point class='org.labrad.grapher.client.LabradGrapher'/>
