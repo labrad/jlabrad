@@ -1406,6 +1406,16 @@ public class Data implements Serializable, Cloneable {
     return result;
   }
 
+  public List<Data> getClusterAsList() {
+    getSubtype(Type.Code.CLUSTER);
+    int len = getClusterSize();
+    List<Data> result = new ArrayList<Data>();
+    for (int i = 0; i < len; i++) {
+      result.add(get(i));
+    }
+    return result;
+  }
+  
   public <T> List<T> getList(Getter<T> getter) {
     getSubtype(Type.Code.LIST);
     int len = getArraySize();
