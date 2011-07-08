@@ -1373,6 +1373,20 @@ public class Data implements Serializable, Cloneable {
     }
     return result;
   }
+  
+  public double[][] getValueArray2D() {
+    getSubtype(Type.Code.LIST);
+    getSubtype(Type.Code.VALUE, 0, 0);
+    int[] shape = getArrayShape();
+    double[][] result = new double[shape[0]][];
+    for (int i = 0; i < shape[0]; i++) {
+      result[i] = new double[shape[1]];
+      for (int j = 0; j < shape[1]; j++) {
+        result[i][j] = get(i, j).getValue();
+      }
+    }
+    return result;
+  }
 
   public String[] getStringArray() {
     getSubtype(Type.Code.LIST);
