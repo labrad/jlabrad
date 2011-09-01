@@ -474,7 +474,12 @@ public class Client implements Connection, Serializable {
     if (request.needsLookup()) {
       result = executor.submit(new Callable<List<Data>>() {
         public List<Data> call() throws Exception {
-          lookupProvider.doLookups(request);
+          try {
+            lookupProvider.doLookups(request);
+          } catch (Exception ex) {
+            if (callback != null) callback.onFailure(request, ex);
+            throw ex;
+          }
           return sendWithoutLookups(request, callback).get();
         }
       });
