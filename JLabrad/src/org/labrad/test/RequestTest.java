@@ -14,6 +14,7 @@ public class RequestTest {
     
     try {
       testSuccess(client, Request.to("Manager").add("Servers"));
+      testFailure(client, Request.to("Manager").add("Non-existent setting"));
       testFailure(client, Request.to("Non-existent Server").add("Non-existent setting"));
     } finally {
       client.close();
