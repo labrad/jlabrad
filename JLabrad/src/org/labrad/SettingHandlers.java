@@ -161,7 +161,7 @@ public class SettingHandlers {
    * @param s
    * @return
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   private static TypedHandler getHandler(Method m, Setting s) {
     // each parameter to the method has a type that we can infer,
     // as well as optional types from the @Accepts annotation
