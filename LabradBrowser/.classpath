@@ -7,6 +7,6 @@
 	<classpathentry kind="lib" path="jetty-util-6.1.16.jar"/>
 	<classpathentry kind="lib" path="servlet-api-2.5-20081211.jar"/>
 	<classpathentry kind="con" path="com.google.gwt.eclipse.core.GWT_CONTAINER"/>
-	<classpathentry kind="lib" path="/JLabrad/lib/guava-r06.jar"/>
+	<classpathentry kind="lib" path="/JLabrad/lib/guava-11.0.1.jar"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
