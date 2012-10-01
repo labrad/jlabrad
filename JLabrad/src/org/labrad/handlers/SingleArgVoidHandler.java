@@ -9,10 +9,10 @@ import org.labrad.data.Data;
 import org.labrad.data.Getter;
 
 public class SingleArgVoidHandler extends AbstractHandler {
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   private final Getter getter;
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   public SingleArgVoidHandler(Method method, Setting setting, List<String> accepts, Getter getter) {
     super(method, setting, accepts, ZeroArgHandler.EMPTY_ONLY);
     this.getter = getter;

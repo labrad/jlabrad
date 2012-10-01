@@ -9,18 +9,18 @@ import org.labrad.data.Data;
 import org.labrad.data.Getter;
 
 public class MultiArgHandler extends AbstractHandler {
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   private final List<Getter> getters;
   private final int nArgs;
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   public MultiArgHandler(Method method, Setting setting, List<String> acceptedTypes, List<String> returnedTypes, List<Getter> getters) {
     super(method, setting, acceptedTypes, returnedTypes);
     this.getters = getters;
     nArgs = getters.size();
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   public Data handle(Object obj, Data data) throws Throwable {
     try {
       Object[] args = new Object[nArgs];

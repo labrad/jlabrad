@@ -6,11 +6,11 @@ import org.labrad.data.Data;
 import org.labrad.data.Getter;
 
 public class Unpacker {
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   private final Getter[] getters;
   private final int n;
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   public Unpacker(List<Getter> getters) {
     n = getters.size();
     this.getters = new Getter[n];

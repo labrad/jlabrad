@@ -76,7 +76,7 @@ import com.google.common.collect.Maps;
  */
 public class ServerConnection implements Connection {
   /** Version for serialization. */
-  private static final long serialVersionUID = 1L;
+  protected static final long serialVersionUID = 1L;
 
   /**
    * Create a new connection object.
