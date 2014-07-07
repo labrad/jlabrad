@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/JLabrad"/>
+	<classpathentry kind="lib" path="jetty-6.1.16.jar"/>
+	<classpathentry kind="lib" path="jetty-util-6.1.16.jar"/>
+	<classpathentry kind="lib" path="gwt-incubator-20100204-r1747.jar"/>
+	<classpathentry kind="lib" path="gflot-1.0.0.jar"/>
+	<classpathentry kind="con" path="com.google.gwt.eclipse.core.GWT_CONTAINER"/>
+	<classpathentry kind="lib" path="/JLabrad/lib/guava-11.0.1.jar"/>
+	<classpathentry kind="output" path="war/WEB-INF/classes"/>
+</classpath>

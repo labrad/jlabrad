@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE web-app
+    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+    "http://java.sun.com/dtd/web-app_2_3.dtd">
+
+<web-app>
+
+  <!-- Default page to serve -->
+  <welcome-file-list>
+    <welcome-file>LabradBrowser.html</welcome-file>
+  </welcome-file-list>
+  
+  <!-- Servlets -->
+  <servlet>
+    <servlet-name>eventServlet</servlet-name>
+    <servlet-class>org.labrad.browser.server.EventServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>eventServlet</servlet-name>
+    <url-pattern>/labradbrowser/events</url-pattern>
+  </servlet-mapping>
+  
+  
+  <servlet>
+    <servlet-name>nodeControlServlet</servlet-name>
+    <servlet-class>org.labrad.browser.server.NodeServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>nodeControlServlet</servlet-name>
+    <url-pattern>/labradbrowser/node</url-pattern>
+  </servlet-mapping>
+
+
+  <servlet>
+    <servlet-name>ipListServlet</servlet-name>
+    <servlet-class>org.labrad.browser.server.IpListServiceImpl</servlet-class>
+  </servlet>  
+  <servlet-mapping>
+    <servlet-name>ipListServlet</servlet-name>
+    <url-pattern>/labradbrowser/ip</url-pattern>
+  </servlet-mapping>
+  
+  
+  <servlet>
+    <servlet-name>registryServlet</servlet-name>
+    <servlet-class>org.labrad.browser.server.RegistryServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>registryServlet</servlet-name>
+    <url-pattern>/labradbrowser/registry</url-pattern>
+  </servlet-mapping>
+
+</web-app>

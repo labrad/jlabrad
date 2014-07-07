@@ -1,0 +1,14 @@
+<project>
+  <target name="war" description="--> Creates basic war file">
+    <property name="webapp.dir" location="${basedir}/war"/>
+  
+    <!-- build war file -->
+    <war destfile="build/LabradBrowser.war" webxml="${webapp.dir}/WEB-INF/web.xml">
+      <fileset dir="${webapp.dir}" includes="**/*"/>
+      
+      <!-- JLabrad dependencies -->
+      <classes dir="${basedir}/../JLabrad/bin"/>
+      <lib dir="${basedir}/../JLabrad/lib"/>
+    </war>
+  </target>
+</project>
