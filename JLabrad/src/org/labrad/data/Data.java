@@ -61,6 +61,20 @@ public class Data implements Serializable, Cloneable {
   private int ofs;
   private List<byte[]> heap;
 
+  @Override
+  public boolean equals(Object other) {
+	  if (other.getClass() != this.getClass())
+		  return false;
+	  Data o = (Data) other;
+	  if (!o.type.matches(this.type))
+		  return false;
+	  try {
+		  return Arrays.equals(o.toBytes(),  this.toBytes());
+	  } catch (IOException e) {
+		  return false;
+	  }
+  }
+  
   /**
    * Make a copy of this Data object.
    */
